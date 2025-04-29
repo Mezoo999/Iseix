@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { FaChartLine, FaInfoCircle, FaArrowLeft, FaSpinner, FaCheckCircle } from 'react-icons/fa';
@@ -10,11 +10,11 @@ import Footer from '@/components/layout/Footer';
 import { useAuth } from '@/contexts/AuthContext';
 import { getInvestmentPlan, createInvestment, InvestmentPlan } from '@/services/investment';
 
-export default function InvestPage() {
+function InvestPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentUser, userData, loading } = useAuth();
-  
+
   const [plan, setPlan] = useState<InvestmentPlan | null>(null);
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('USDT');
@@ -22,17 +22,17 @@ export default function InvestPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  
+
   // الحصول على معرف الخطة من معلمات البحث
   const planId = searchParams?.get('planId');
-  
+
   // التحقق من تسجيل الدخول
   useEffect(() => {
     if (!loading && !currentUser) {
       router.push('/login');
     }
   }, [currentUser, loading, router]);
-  
+
   // جلب تفاصيل خطة الاستثمار
   useEffect(() => {
     const fetchPlan = async () => {
@@ -41,7 +41,7 @@ export default function InvestPage() {
         setIsLoading(false);
         return;
       }
-      
+
       try {
         const investmentPlan = await getInvestmentPlan(planId);
         if (!investmentPlan) {
@@ -58,52 +58,52 @@ export default function InvestPage() {
         setIsLoading(false);
       }
     };
-    
+
     if (currentUser && planId) {
       fetchPlan();
     }
   }, [currentUser, planId]);
-  
+
   // معالج تغيير المبلغ
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setAmount(value);
   };
-  
+
   // معالج الاستثمار
   const handleInvest = async () => {
     if (!currentUser || !plan) return;
-    
+
     // التحقق من صحة المبلغ
     const investAmount = parseFloat(amount);
     if (isNaN(investAmount) || investAmount <= 0) {
       setError('يرجى إدخال مبلغ صحيح');
       return;
     }
-    
+
     // التحقق من الحد الأدنى والأقصى
     if (investAmount < plan.minAmount || investAmount > plan.maxAmount) {
       setError(`يجب أن يكون المبلغ بين ${plan.minAmount} و ${plan.maxAmount}`);
       return;
     }
-    
+
     // التحقق من الرصيد
     const balance = userData?.balances?.[currency] || 0;
     if (investAmount > balance) {
       setError('الرصيد غير كافٍ');
       return;
     }
-    
+
     setIsProcessing(true);
     setError('');
     setSuccess('');
-    
+
     try {
       // إنشاء استثمار جديد
       await createInvestment(currentUser.uid, plan.id!, investAmount, currency);
-      
+
       setSuccess('تم إنشاء الاستثمار بنجاح');
-      
+
       // الانتقال إلى صفحة استثماراتي بعد 2 ثانية
       setTimeout(() => {
         router.push('/investment/my-investments');
@@ -115,17 +115,17 @@ export default function InvestPage() {
       setIsProcessing(false);
     }
   };
-  
+
   // حساب العائد المتوقع
   const calculateExpectedReturn = () => {
     if (!plan || !amount) return 0;
-    
+
     const investAmount = parseFloat(amount);
     if (isNaN(investAmount)) return 0;
-    
+
     return investAmount * (1 + plan.returnRate / 100);
   };
-  
+
   // إذا كان التحميل جاريًا، اعرض شاشة التحميل
   if (loading || isLoading) {
     return (
@@ -134,12 +134,12 @@ export default function InvestPage() {
       </div>
     );
   }
-  
+
   // إذا لم يكن هناك مستخدم، لا تعرض شيئًا (سيتم توجيهه إلى صفحة تسجيل الدخول)
   if (!currentUser || !userData) {
     return null;
   }
-  
+
   // إذا كان هناك خطأ في جلب الخطة
   if (!plan && !isLoading) {
     return (
@@ -165,7 +165,7 @@ export default function InvestPage() {
                 استثمر في خطة استثمارية
               </motion.p>
             </div>
-            
+
             <motion.div
               className="bg-error/20 text-error p-4 rounded-lg mb-6"
               initial={{ opacity: 0, height: 0 }}
@@ -175,7 +175,7 @@ export default function InvestPage() {
               <FaInfoCircle className="inline ml-2" />
               {error || 'خطة الاستثمار غير موجودة'}
             </motion.div>
-            
+
             <div className="text-center mt-8">
               <motion.button
                 className="btn btn-outline"
@@ -193,11 +193,11 @@ export default function InvestPage() {
       </>
     );
   }
-  
+
   return (
     <>
       <Navbar />
-      
+
       <main className="pt-24 min-h-screen">
         <div className="container mx-auto px-4 py-8">
           <div className="mb-8">
@@ -218,7 +218,7 @@ export default function InvestPage() {
               استثمر في خطة {plan?.name}
             </motion.p>
           </div>
-          
+
           {error && (
             <motion.div
               className="bg-error/20 text-error p-4 rounded-lg mb-6"
@@ -230,7 +230,7 @@ export default function InvestPage() {
               {error}
             </motion.div>
           )}
-          
+
           {success && (
             <motion.div
               className="bg-success/20 text-success p-4 rounded-lg mb-6"
@@ -242,7 +242,7 @@ export default function InvestPage() {
               {success}
             </motion.div>
           )}
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* تفاصيل الخطة */}
             <motion.div
@@ -260,7 +260,7 @@ export default function InvestPage() {
                   <p className="text-foreground-muted">{plan?.description}</p>
                 </div>
               </div>
-              
+
               <div className="mb-6">
                 <div className="flex justify-between mb-2">
                   <span className="text-foreground-muted">العائد اليومي</span>
@@ -284,7 +284,7 @@ export default function InvestPage() {
                 </div>
               </div>
             </motion.div>
-            
+
             {/* نموذج الاستثمار */}
             <motion.div
               className="glass-effect p-6 rounded-xl md:col-span-2"
@@ -293,7 +293,7 @@ export default function InvestPage() {
               transition={{ duration: 0.5 }}
             >
               <h3 className="text-xl font-bold mb-6">تفاصيل الاستثمار</h3>
-              
+
               <div className="mb-6">
                 <label className="block mb-2 font-medium">عملة الاستثمار</label>
                 <select
@@ -308,7 +308,7 @@ export default function InvestPage() {
                   <option value="BNB">BNB (Binance Coin)</option>
                 </select>
               </div>
-              
+
               <div className="mb-6">
                 <label className="block mb-2 font-medium">مبلغ الاستثمار</label>
                 <div className="relative">
@@ -335,7 +335,7 @@ export default function InvestPage() {
                   </p>
                 </div>
               </div>
-              
+
               <div className="mb-8">
                 <h4 className="font-medium mb-2">ملخص الاستثمار</h4>
                 <div className="bg-background-light p-4 rounded-lg">
@@ -357,7 +357,7 @@ export default function InvestPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex flex-col md:flex-row gap-4">
                 <motion.button
                   className="btn btn-outline flex-1"
@@ -369,7 +369,7 @@ export default function InvestPage() {
                   <FaArrowLeft className="ml-2" />
                   العودة
                 </motion.button>
-                
+
                 <motion.button
                   className="btn btn-primary flex-1"
                   whileHover={{ scale: 1.02 }}
@@ -391,8 +391,20 @@ export default function InvestPage() {
           </div>
         </div>
       </main>
-      
+
       <Footer />
     </>
+  );
+}
+
+export default function InvestPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    }>
+      <InvestPageContent />
+    </Suspense>
   );
 }
