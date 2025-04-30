@@ -16,7 +16,7 @@ const CircularProgress = ({ value, max }: { value: number; max: number }) => {
   const offset = circumference - (percentage / 100) * circumference;
 
   return (
-    <div className="relative w-24 h-24 flex items-center justify-center">
+    <div className="relative w-28 h-28 flex items-center justify-center">
       <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
         {/* الدائرة الخلفية */}
         <circle
@@ -24,7 +24,7 @@ const CircularProgress = ({ value, max }: { value: number; max: number }) => {
           cy="50"
           r="45"
           fill="none"
-          stroke="rgba(255,255,255,0.1)"
+          stroke="rgba(59, 130, 246, 0.1)"
           strokeWidth="8"
         />
         {/* الدائرة المتحركة */}
@@ -33,18 +33,49 @@ const CircularProgress = ({ value, max }: { value: number; max: number }) => {
           cy="50"
           r="45"
           fill="none"
-          stroke="currentColor"
-          strokeWidth="8"
+          stroke="url(#gradientCircle)"
+          strokeWidth="10"
+          strokeLinecap="round"
           strokeDasharray={circumference}
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 1, ease: "easeInOut" }}
-          className="text-primary"
+          transition={{ duration: 1.5, ease: "easeInOut" }}
         />
+
+        {/* تعريف التدرج اللوني */}
+        <defs>
+          <linearGradient id="gradientCircle" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#3B82F6" />
+            <stop offset="100%" stopColor="#2563EB" />
+          </linearGradient>
+        </defs>
       </svg>
+
+      {/* إضافة تأثير توهج خلف الدائرة */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div
+          className="absolute w-20 h-20 rounded-full bg-primary/20 blur-xl"
+          style={{ opacity: percentage / 200 + 0.1 }}
+        />
+      </div>
+
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-bold">{value}</span>
-        <span className="text-xs text-foreground-muted">من {max}</span>
+        <motion.span
+          className="text-3xl font-bold"
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+        >
+          {value}
+        </motion.span>
+        <motion.span
+          className="text-xs text-foreground-muted"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.7 }}
+        >
+          من {max}
+        </motion.span>
       </div>
     </div>
   );
@@ -55,17 +86,48 @@ const LinearProgressBar = ({ value, max }: { value: number; max: number }) => {
   const percentage = (value / max) * 100;
 
   return (
-    <div className="relative w-full h-4 bg-background-light rounded-full overflow-hidden mb-2">
+    <div className="relative w-full h-6 bg-background-dark/50 rounded-full overflow-hidden mb-3 border border-primary/10 shadow-inner">
+      {/* نقاط المراحل */}
+      <div className="absolute top-0 right-0 w-full h-full flex justify-between items-center px-2 z-10">
+        {Array.from({ length: max }).map((_, index) => (
+          <motion.div
+            key={index}
+            className={`w-3 h-3 rounded-full ${
+              index < value
+                ? 'bg-white shadow-lg'
+                : 'bg-background-lighter/50'
+            }`}
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{
+              scale: index < value ? 1 : 0.7,
+              opacity: index < value ? 1 : 0.5
+            }}
+            transition={{ duration: 0.3, delay: index * 0.1 }}
+          />
+        ))}
+      </div>
+
+      {/* شريط التقدم */}
       <motion.div
-        className="absolute top-0 right-0 h-full bg-gradient-to-l from-primary to-primary-dark"
+        className="absolute top-0 right-0 h-full bg-gradient-to-l from-primary via-primary-dark to-blue-700"
+        style={{
+          boxShadow: '0 0 10px rgba(59, 130, 246, 0.5), 0 0 20px rgba(59, 130, 246, 0.3)'
+        }}
         initial={{ width: 0 }}
         animate={{ width: `${percentage}%` }}
         transition={{ duration: 0.8, ease: "easeOut" }}
       />
+
+      {/* النص */}
       <div className="absolute top-0 right-0 w-full h-full flex items-center justify-center">
-        <span className="text-xs font-medium text-white">
+        <motion.span
+          className="text-xs font-medium text-white z-20 drop-shadow-md"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+        >
           {value}/{max} مهام مكتملة
-        </span>
+        </motion.span>
       </div>
     </div>
   );
@@ -74,6 +136,7 @@ const LinearProgressBar = ({ value, max }: { value: number; max: number }) => {
 // مكون العداد التنازلي
 const CountdownTimer = ({ nextReset }: { nextReset: Date }) => {
   const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number }>({ hours: 0, minutes: 0, seconds: 0 });
+  const [isBlinking, setIsBlinking] = useState(false);
 
   useEffect(() => {
     const calculateTimeLeft = () => {
@@ -88,6 +151,13 @@ const CountdownTimer = ({ nextReset }: { nextReset: Date }) => {
       const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((difference % (1000 * 60)) / 1000);
 
+      // تفعيل الوميض عندما يكون الوقت المتبقي أقل من ساعة
+      if (hours === 0 && minutes < 60) {
+        setIsBlinking(true);
+      } else {
+        setIsBlinking(false);
+      }
+
       return { hours, minutes, seconds };
     };
 
@@ -100,21 +170,91 @@ const CountdownTimer = ({ nextReset }: { nextReset: Date }) => {
     return () => clearInterval(timer);
   }, [nextReset]);
 
+  // حساب النسبة المئوية للوقت المتبقي (24 ساعة كاملة)
+  const totalSecondsInDay = 24 * 60 * 60;
+  const secondsLeft = timeLeft.hours * 60 * 60 + timeLeft.minutes * 60 + timeLeft.seconds;
+  const percentageLeft = (secondsLeft / totalSecondsInDay) * 100;
+
   return (
-    <div className="flex items-center justify-center space-x-2 text-foreground-muted">
-      <FaClock className="ml-2" />
-      <div className="flex items-center">
-        <div className="bg-background-light px-2 py-1 rounded">
-          {String(timeLeft.hours).padStart(2, '0')}
+    <div className="flex flex-col items-center justify-center">
+      <div className="flex items-center justify-center mb-3">
+        <motion.div
+          className={`w-10 h-10 rounded-full flex items-center justify-center ${
+            isBlinking ? 'bg-warning/20' : 'bg-primary/20'
+          }`}
+          animate={isBlinking ? { scale: [1, 1.1, 1] } : {}}
+          transition={{ repeat: Infinity, duration: 2 }}
+        >
+          <FaClock className={`text-xl ${isBlinking ? 'text-warning' : 'text-primary'}`} />
+        </motion.div>
+        <div className="mr-3">
+          <p className="text-sm font-medium">إعادة تعيين المهام في</p>
+          <div className="h-1 w-full bg-background-lighter rounded-full mt-1 overflow-hidden">
+            <motion.div
+              className={`h-full ${isBlinking ? 'bg-warning' : 'bg-primary'}`}
+              initial={{ width: `${percentageLeft}%` }}
+              animate={{ width: `${percentageLeft}%` }}
+              transition={{ duration: 0.5 }}
+            />
+          </div>
         </div>
-        <span className="mx-1">:</span>
-        <div className="bg-background-light px-2 py-1 rounded">
-          {String(timeLeft.minutes).padStart(2, '0')}
-        </div>
-        <span className="mx-1">:</span>
-        <div className="bg-background-light px-2 py-1 rounded">
-          {String(timeLeft.seconds).padStart(2, '0')}
-        </div>
+      </div>
+
+      <div className="flex items-center justify-center space-x-2 space-x-reverse">
+        <motion.div
+          className={`bg-gradient-to-b ${
+            isBlinking
+              ? 'from-warning/20 to-warning/10'
+              : 'from-primary/20 to-primary/10'
+          } px-3 py-2 rounded-lg shadow-inner border ${
+            isBlinking ? 'border-warning/30' : 'border-primary/30'
+          }`}
+          animate={isBlinking && timeLeft.seconds % 2 === 0 ? { opacity: [1, 0.7, 1] } : {}}
+          transition={{ duration: 1, repeat: Infinity }}
+        >
+          <span className="font-mono font-bold text-lg">
+            {String(timeLeft.hours).padStart(2, '0')}
+          </span>
+          <div className="text-xs text-foreground-muted mt-1 text-center">ساعة</div>
+        </motion.div>
+
+        <span className="text-xl font-bold mx-1">:</span>
+
+        <motion.div
+          className={`bg-gradient-to-b ${
+            isBlinking
+              ? 'from-warning/20 to-warning/10'
+              : 'from-primary/20 to-primary/10'
+          } px-3 py-2 rounded-lg shadow-inner border ${
+            isBlinking ? 'border-warning/30' : 'border-primary/30'
+          }`}
+          animate={isBlinking && timeLeft.seconds % 2 === 0 ? { opacity: [1, 0.7, 1] } : {}}
+          transition={{ duration: 1, repeat: Infinity }}
+        >
+          <span className="font-mono font-bold text-lg">
+            {String(timeLeft.minutes).padStart(2, '0')}
+          </span>
+          <div className="text-xs text-foreground-muted mt-1 text-center">دقيقة</div>
+        </motion.div>
+
+        <span className="text-xl font-bold mx-1">:</span>
+
+        <motion.div
+          className={`bg-gradient-to-b ${
+            isBlinking
+              ? 'from-warning/20 to-warning/10'
+              : 'from-primary/20 to-primary/10'
+          } px-3 py-2 rounded-lg shadow-inner border ${
+            isBlinking ? 'border-warning/30' : 'border-primary/30'
+          }`}
+          animate={{ opacity: [1, 0.7, 1] }}
+          transition={{ duration: 1, repeat: Infinity }}
+        >
+          <span className="font-mono font-bold text-lg">
+            {String(timeLeft.seconds).padStart(2, '0')}
+          </span>
+          <div className="text-xs text-foreground-muted mt-1 text-center">ثانية</div>
+        </motion.div>
       </div>
     </div>
   );
@@ -230,18 +370,24 @@ export default function DailyTasksCard() {
 
   return (
     <motion.div
-      className="card card-primary"
+      className="bg-gradient-to-br from-background-light/80 to-background-lighter/60 backdrop-blur-lg rounded-xl shadow-lg border border-primary/20 p-6 overflow-hidden"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="flex items-center justify-between mb-4">
+      {/* خلفية زخرفية */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10">
+        <div className="absolute top-0 left-0 w-40 h-40 rounded-full bg-primary/5 blur-3xl"></div>
+        <div className="absolute bottom-0 right-0 w-60 h-60 rounded-full bg-primary/5 blur-3xl"></div>
+      </div>
+
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
-          <div className="p-3 rounded-full bg-primary/20 text-primary ml-3">
-            <FaTasks className="text-xl" />
+          <div className="p-4 rounded-full bg-gradient-to-br from-primary/30 to-primary-dark/30 text-primary ml-4 shadow-lg">
+            <FaTasks className="text-2xl" />
           </div>
           <div>
-            <h3 className="text-lg font-bold">المهام اليومية</h3>
+            <h3 className="text-xl font-bold">المهام اليومية</h3>
             <p className="text-sm text-foreground-muted">أكمل المهام للحصول على مكافآت يومية</p>
           </div>
         </div>
@@ -250,88 +396,127 @@ export default function DailyTasksCard() {
       </div>
 
       {/* شريط التقدم الخطي */}
-      <div className="mb-4">
+      <div className="mb-6">
         <LinearProgressBar value={tasksData.completedTasks} max={tasksData.totalTasks} />
-        <div className="flex justify-between text-xs text-foreground-muted">
+        <div className="flex justify-between text-xs text-foreground-muted mt-1 px-1">
           <span>0</span>
-          <span>تقدم المهام</span>
+          <span>تقدم المهام اليومية</span>
           <span>{tasksData.totalTasks}</span>
         </div>
       </div>
 
-      <div className="bg-background-light/30 p-4 rounded-lg mb-6">
-        <div className="flex justify-between items-center mb-3">
-          <span className="text-foreground-muted flex items-center">
-            <FaPercentage className="ml-1 text-success" />
-            معدل الربح:
-          </span>
-          <span className="font-bold text-success">{profitRateDisplay} لكل مهمة</span>
-        </div>
+      <motion.div
+        className="bg-gradient-to-br from-background-dark/50 to-background-dark/30 p-5 rounded-xl mb-6 border border-primary/10 shadow-inner"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="bg-background-lighter/20 p-3 rounded-lg border border-primary/10">
+            <div className="flex items-center mb-1">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center ml-2">
+                <FaPercentage className="text-primary" />
+              </div>
+              <span className="text-sm">معدل الربح</span>
+            </div>
+            <p className="text-lg font-bold text-success">{profitRateDisplay}</p>
+            <p className="text-xs text-foreground-muted">لكل مهمة مكتملة</p>
+          </div>
 
-        <div className="flex justify-between items-center mb-3">
-          <span className="text-foreground-muted flex items-center">
-            <FaCheckCircle className="ml-1 text-primary" />
-            المهام المكتملة:
-          </span>
-          <span className="font-bold">{tasksData.completedTasks} من {tasksData.totalTasks}</span>
-        </div>
-
-        <div className="flex justify-between items-center mb-3">
-          <span className="text-foreground-muted flex items-center">
-            <FaTasks className="ml-1 text-info" />
-            المهام المتبقية:
-          </span>
-          <span className="font-bold">{tasksData.remainingTasks}</span>
+          <div className="bg-background-lighter/20 p-3 rounded-lg border border-primary/10">
+            <div className="flex items-center mb-1">
+              <div className="w-8 h-8 rounded-full bg-warning/10 flex items-center justify-center ml-2">
+                <FaCoins className="text-warning" />
+              </div>
+              <span className="text-sm">إجمالي المكافآت</span>
+            </div>
+            <p className="text-lg font-bold text-warning">{tasksData.totalReward.toFixed(2)} USDT</p>
+            <p className="text-xs text-foreground-muted">اليوم</p>
+          </div>
         </div>
 
         <div className="flex justify-between items-center">
-          <span className="text-foreground-muted flex items-center">
-            <FaCoins className="ml-1 text-warning" />
-            إجمالي المكافآت اليوم:
-          </span>
-          <span className="font-bold text-primary">{tasksData.totalReward.toFixed(2)} USDT</span>
+          <div className="flex items-center">
+            <div className="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center ml-2">
+              <FaCheckCircle className="text-success" />
+            </div>
+            <div>
+              <span className="text-sm">المهام المكتملة</span>
+              <p className="font-bold">{tasksData.completedTasks} من {tasksData.totalTasks}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center">
+            <div className="w-8 h-8 rounded-full bg-info/10 flex items-center justify-center ml-2">
+              <FaTasks className="text-info" />
+            </div>
+            <div>
+              <span className="text-sm">المهام المتبقية</span>
+              <p className="font-bold">{tasksData.remainingTasks}</p>
+            </div>
+          </div>
         </div>
-      </div>
+      </motion.div>
 
       <div className="mb-6">
-        <ActionButton
-          variant={tasksData.remainingTasks <= 0 ? "outline" : "primary"}
-          fullWidth
-          disabled={tasksData.remainingTasks <= 0 || isCompleting}
-          onClick={handleCompleteTask}
-          icon={tasksData.remainingTasks <= 0 ? <FaCheckCircle /> : <FaCoins />}
+        <motion.div
+          whileHover={tasksData.remainingTasks > 0 ? { scale: 1.02 } : {}}
+          whileTap={tasksData.remainingTasks > 0 ? { scale: 0.98 } : {}}
         >
-          {isCompleting ? (
-            <ButtonLoader />
-          ) : tasksData.remainingTasks <= 0 ? (
-            'تم إكمال جميع المهام'
-          ) : (
-            'إكمال مهمة'
-          )}
-        </ActionButton>
+          <ActionButton
+            variant={tasksData.remainingTasks <= 0 ? "outline" : "primary"}
+            fullWidth
+            disabled={tasksData.remainingTasks <= 0 || isCompleting}
+            onClick={handleCompleteTask}
+            icon={tasksData.remainingTasks <= 0 ? <FaCheckCircle /> : <FaCoins />}
+            size="lg"
+            className="py-4 text-lg shadow-lg"
+          >
+            {isCompleting ? (
+              <ButtonLoader />
+            ) : tasksData.remainingTasks <= 0 ? (
+              'تم إكمال جميع المهام'
+            ) : (
+              'إكمال مهمة'
+            )}
+          </ActionButton>
+        </motion.div>
       </div>
 
       <AnimatePresence>
         {showReward && (
           <motion.div
-            className="bg-success/10 border border-success/20 text-success p-4 rounded-lg mb-6 text-center"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
+            className="bg-gradient-to-r from-success/20 to-success/10 border border-success/30 text-success p-5 rounded-xl mb-6 text-center shadow-md"
+            initial={{ opacity: 0, scale: 0.8, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: -10 }}
+            transition={{ duration: 0.4, type: 'spring' }}
           >
-            <div className="flex items-center justify-center">
-              <FaCoins className="ml-2" />
-              <span className="font-bold">مكافأة: {lastReward.toFixed(2)} USDT</span>
-            </div>
+            <motion.div
+              className="flex items-center justify-center"
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ repeat: 3, duration: 0.6 }}
+            >
+              <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center ml-3">
+                <FaCoins className="text-success text-xl" />
+              </div>
+              <div>
+                <span className="text-sm">تم إضافة مكافأة</span>
+                <p className="font-bold text-xl">{lastReward.toFixed(2)} USDT</p>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="text-center bg-background-light/30 p-4 rounded-lg">
-        <p className="text-sm text-foreground-muted mb-2">إعادة تعيين المهام في</p>
+      <motion.div
+        className="bg-gradient-to-br from-background-dark/50 to-background-dark/30 p-5 rounded-xl border border-primary/10 shadow-inner"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
         <CountdownTimer nextReset={getNextResetTime()} />
-      </div>
+      </motion.div>
     </motion.div>
   );
 }

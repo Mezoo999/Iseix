@@ -1,57 +1,214 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaWallet, FaInfoCircle, FaSpinner, FaArrowRight, FaShieldAlt } from 'react-icons/fa';
+import { FaWallet, FaInfoCircle, FaSpinner, FaArrowRight, FaShieldAlt, FaChartLine, FaExclamationTriangle } from 'react-icons/fa';
 import { useAlert } from '@/contexts/AlertContext';
+import { getAvailableProfitsForWithdrawal, hasPendingWithdrawals } from '@/services/withdrawals';
 
 interface WithdrawFormProps {
   balance: number;
   currency: string;
   onSubmit: (amount: number, address: string, method: string) => Promise<void>;
   isProcessing?: boolean;
+  initialAvailableProfits?: number;
+  hasPendingWithdrawal?: boolean;
 }
 
 export default function WithdrawForm({
   balance,
   currency,
   onSubmit,
-  isProcessing = false
+  isProcessing = false,
+  initialAvailableProfits = 0,
+  hasPendingWithdrawal: initialHasPendingWithdrawal = false
 }: WithdrawFormProps) {
-  const { showAlert } = useAlert();
+  const { showAlert, showModalAlert } = useAlert();
   const [amount, setAmount] = useState('');
   const [address, setAddress] = useState('');
   const [method, setMethod] = useState('');
   const [step, setStep] = useState(1);
+  const [availableProfits, setAvailableProfits] = useState(0);
+  const [hasPendingWithdrawal, setHasPendingWithdrawal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // الحصول على الأرباح المتاحة للسحب وحالة طلبات السحب المعلقة
+  useEffect(() => {
+    // إذا تم تمرير قيمة أولية للمكافآت المتاحة، استخدمها
+    if (initialAvailableProfits > 0) {
+      setAvailableProfits(initialAvailableProfits);
+      console.log('[WithdrawForm] استخدام المكافآت المتاحة المررة من الصفحة الأم:', initialAvailableProfits);
+    }
+
+    // إذا تم تمرير حالة طلبات السحب المعلقة، استخدمها
+    if (initialHasPendingWithdrawal) {
+      setHasPendingWithdrawal(initialHasPendingWithdrawal);
+      console.log('[WithdrawForm] استخدام حالة طلبات السحب المعلقة المررة من الصفحة الأم:', initialHasPendingWithdrawal);
+    }
+
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        // الحصول على معرف المستخدم من localStorage
+        const userDataStr = localStorage.getItem('userData');
+        if (!userDataStr) {
+          setIsLoading(false);
+          return;
+        }
+
+        const userData = JSON.parse(userDataStr);
+        const userId = userData.uid;
+
+        // محاولة استخدام قيمة المكافآت المتاحة من localStorage إذا كانت متوفرة
+        if (initialAvailableProfits <= 0 && userData.availableProfits > 0) {
+          setAvailableProfits(userData.availableProfits);
+          console.log('[WithdrawForm] استخدام المكافآت المتاحة من localStorage:', userData.availableProfits);
+        }
+        // الحصول على الأرباح المتاحة للسحب فقط إذا لم يتم تمرير قيمة أولية ولم تكن متوفرة في localStorage
+        else if (initialAvailableProfits <= 0) {
+          console.log('[WithdrawForm] جلب المكافآت المتاحة من الخدمة للمستخدم:', userId);
+          const profits = await getAvailableProfitsForWithdrawal(userId, currency);
+          setAvailableProfits(profits);
+          console.log('[WithdrawForm] تم جلب المكافآت المتاحة من الخدمة:', profits);
+        }
+
+        // التحقق من وجود طلبات سحب معلقة فقط إذا لم يتم تمرير حالة طلبات السحب المعلقة
+        if (!initialHasPendingWithdrawal) {
+          console.log('[WithdrawForm] التحقق من وجود طلبات سحب معلقة للمستخدم:', userId);
+          const hasPending = await hasPendingWithdrawals(userId);
+          setHasPendingWithdrawal(hasPending);
+          console.log('[WithdrawForm] نتيجة التحقق من وجود طلبات سحب معلقة:', hasPending);
+        }
+      } catch (error) {
+        console.error('[WithdrawForm] Error fetching withdrawal data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [currency, initialAvailableProfits, initialHasPendingWithdrawal]);
 
   const networks = [
-    { id: 'usdt_trc20', name: 'USDT TRC20', icon: '🟢', fee: '1 USDT' },
-    { id: 'usdt_erc20', name: 'USDT ERC20', icon: '🔵', fee: '10-20 USDT' },
-    { id: 'btc', name: 'Bitcoin', icon: '🟡', fee: '0.0005 BTC' },
+    {
+      id: 'usdt_trc20',
+      name: 'USDT TRC20',
+      icon: <div className="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center"><FaWallet className="text-white" /></div>,
+      fee: '1 USDT',
+      color: 'bg-gradient-to-r from-yellow-500 to-yellow-600'
+    },
+    {
+      id: 'bnb_bep20',
+      name: 'BNB BEP20',
+      icon: <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center"><FaWallet className="text-white" /></div>,
+      fee: '0.001 BNB',
+      color: 'bg-gradient-to-r from-orange-500 to-orange-600'
+    }
   ];
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // منع الضغط المتكرر على زر السحب
+    if (isSubmitting) {
+      console.log('[WithdrawForm] تم تجاهل الطلب لأن هناك طلب آخر قيد المعالجة');
+      return;
+    }
+
     if (!amount || !address || !method) {
-      showAlert('error', 'يرجى ملء جميع الحقول المطلوبة');
+      showModalAlert(
+        'error',
+        'حقول مطلوبة',
+        'يرجى ملء جميع الحقول المطلوبة',
+        'فهمت'
+      );
       return;
     }
 
     const amountNum = parseFloat(amount);
+    console.log(`[WithdrawForm] بدء عملية السحب: المبلغ=${amountNum}, العنوان=${address}, الطريقة=${method}`);
+
+    // التحقق من وجود طلبات سحب معلقة
+    if (hasPendingWithdrawal) {
+      console.log('[WithdrawForm] تم رفض الطلب بسبب وجود طلب سحب معلق');
+      showModalAlert(
+        'error',
+        'طلب سحب معلق',
+        'لديك طلب سحب معلق بالفعل. يرجى الانتظار حتى تتم معالجته قبل إنشاء طلب جديد.',
+        'فهمت'
+      );
+      return;
+    }
+
+    // التحقق من أن المبلغ المطلوب سحبه لا يتجاوز المكافآت المتاحة
+    if (amountNum > availableProfits) {
+      console.log(`[WithdrawForm] تم رفض الطلب لأن المبلغ (${amountNum}) أكبر من المكافآت المتاحة (${availableProfits})`);
+      showModalAlert(
+        'error',
+        'خطأ في المبلغ',
+        `يمكنك فقط سحب المكافآت. المكافآت المتاحة للسحب: ${availableProfits.toFixed(2)} ${currency}`,
+        'فهمت'
+      );
+      return;
+    }
+
     if (amountNum > balance) {
-      showAlert('error', 'المبلغ المطلوب أكبر من الرصيد المتاح');
+      console.log(`[WithdrawForm] تم رفض الطلب لأن المبلغ (${amountNum}) أكبر من الرصيد المتاح (${balance})`);
+      showModalAlert(
+        'error',
+        'خطأ في المبلغ',
+        'المبلغ المطلوب أكبر من الرصيد المتاح',
+        'فهمت'
+      );
       return;
     }
 
     if (amountNum < 20) {
-      showAlert('error', 'الحد الأدنى للسحب هو 20 USDT');
+      console.log('[WithdrawForm] تم رفض الطلب لأن المبلغ أقل من الحد الأدنى');
+      showModalAlert(
+        'error',
+        'خطأ في المبلغ',
+        `الحد الأدنى للسحب هو 20 ${currency}`,
+        'فهمت'
+      );
       return;
     }
 
     try {
+      setIsSubmitting(true);
+      console.log('[WithdrawForm] جاري إرسال طلب السحب...');
+
       await onSubmit(amountNum, address, method);
+
+      console.log('[WithdrawForm] تم إرسال طلب السحب بنجاح');
+
+      // إعادة تعيين النموذج بعد النجاح
+      setAmount('');
+      setAddress('');
+      setStep(1);
+
     } catch (error) {
-      console.error('Error submitting withdrawal:', error);
+      console.error('[WithdrawForm] Error submitting withdrawal:', error);
+      // عرض رسالة الخطأ إذا كانت متاحة
+      if (error instanceof Error) {
+        showModalAlert(
+          'error',
+          'خطأ في طلب السحب',
+          error.message,
+          'فهمت'
+        );
+      } else {
+        showModalAlert(
+          'error',
+          'خطأ في طلب السحب',
+          'حدث خطأ أثناء إرسال طلب السحب',
+          'فهمت'
+        );
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -83,27 +240,20 @@ export default function WithdrawForm({
             exit={{ opacity: 0, y: -20 }}
           >
             <h3 className="text-xl font-bold mb-6">اختر شبكة السحب</h3>
-            <div className="space-y-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               {networks.map((net) => (
                 <button
                   key={net.id}
-                  className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between ${
+                  className={`p-4 sm:p-5 rounded-xl border-2 transition-all ${
                     method === net.id
-                      ? 'border-primary bg-primary/10'
-                      : 'border-white/10 hover:border-primary/50'
+                      ? `${net.color} text-white shadow-lg`
+                      : 'border-white/10 hover:border-primary/50 bg-background-dark/30'
                   }`}
                   onClick={() => setMethod(net.id)}
                 >
-                  <div className="flex items-center">
-                    <div className="text-2xl ml-3">{net.icon}</div>
-                    <div>
-                      <div className="font-medium">{net.name}</div>
-                      <div className="text-sm text-gray-400">رسوم الشبكة: {net.fee}</div>
-                    </div>
-                  </div>
-                  {method === net.id && (
-                    <FaArrowRight className="text-primary" />
-                  )}
+                  <div className="mb-3">{net.icon}</div>
+                  <div className="font-medium text-sm sm:text-base">{net.name}</div>
+                  <div className="text-xs mt-1">رسوم الشبكة: {net.fee}</div>
                 </button>
               ))}
             </div>
@@ -126,15 +276,59 @@ export default function WithdrawForm({
           >
             <h3 className="text-xl font-bold mb-6">تفاصيل السحب</h3>
 
-            <div className="bg-blue-500/10 rounded-xl p-4 mb-6">
-              <div className="flex items-center">
-                <FaWallet className="text-primary ml-2" />
-                <div>
-                  <div className="font-medium">الرصيد المتاح</div>
-                  <div className="text-2xl font-bold mt-1">{balance.toFixed(2)} {currency}</div>
-                </div>
+            {isLoading ? (
+              <div className="bg-blue-500/10 rounded-xl p-4 mb-6 flex justify-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="bg-blue-500/10 rounded-xl p-4 mb-4">
+                  <div className="flex items-center">
+                    <FaWallet className="text-primary ml-2" />
+                    <div>
+                      <div className="font-medium">الرصيد المتاح</div>
+                      <div className="text-2xl font-bold mt-1">{balance.toFixed(2)} {currency}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-green-500/10 rounded-xl p-4 mb-6">
+                  <div className="flex items-center">
+                    <FaChartLine className="text-success ml-2" />
+                    <div>
+                      <div className="font-medium">المكافآت المتاحة للسحب</div>
+                      <div className="text-2xl font-bold mt-1">{availableProfits.toFixed(2)} {currency}</div>
+                      <div className="text-sm text-gray-400 mt-1">يمكنك فقط سحب المكافآت وليس مبلغ الإيداع الأصلي</div>
+                    </div>
+                  </div>
+                </div>
+
+                {hasPendingWithdrawal && (
+                  <div className="bg-error/10 text-error p-4 rounded-lg mb-6">
+                    <div className="flex items-start">
+                      <FaExclamationTriangle className="ml-2 mt-1 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium">لديك طلب سحب معلق</p>
+                        <p className="text-sm">يرجى الانتظار حتى تتم معالجة طلب السحب الحالي قبل إنشاء طلب جديد.</p>
+                        <button
+                          className="mt-2 px-3 py-1 bg-error/20 hover:bg-error/30 text-error rounded-lg text-xs transition-colors"
+                          onClick={() => {
+                            showModalAlert(
+                              'error',
+                              'طلب سحب معلق',
+                              'لديك طلب سحب معلق بالفعل. يرجى الانتظار حتى تتم معالجته قبل إنشاء طلب جديد. يمكنك مراجعة حالة طلب السحب في صفحة المعاملات.',
+                              'فهمت'
+                            );
+                          }}
+                        >
+                          مزيد من المعلومات
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
 
             <div className="mb-6">
               <label className="block mb-2 font-medium">المبلغ ({currency})</label>
@@ -196,6 +390,12 @@ export default function WithdrawForm({
                   <span className="font-medium">{parseFloat(amount).toFixed(2)} {currency}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-white/10">
+                  <span className="text-gray-400">المكافآت المتاحة للسحب</span>
+                  <span className={`font-medium ${parseFloat(amount) > availableProfits ? 'text-error' : 'text-success'}`}>
+                    {availableProfits.toFixed(2)} {currency}
+                  </span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-white/10">
                   <span className="text-gray-400">الشبكة</span>
                   <span className="font-medium">
                     {networks.find(n => n.id === method)?.name}
@@ -214,6 +414,17 @@ export default function WithdrawForm({
                   </span>
                 </div>
               </div>
+
+              {parseFloat(amount) > availableProfits && (
+                <div className="mt-3 bg-error/10 text-error p-2 rounded-lg text-xs">
+                  <div className="flex items-start">
+                    <FaInfoCircle className="ml-1 mt-0.5 flex-shrink-0" />
+                    <div>
+                      المبلغ المطلوب سحبه يتجاوز المكافآت المتاحة. يمكنك فقط سحب المكافآت وليس مبلغ الإيداع الأصلي.
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-4 mb-6">
@@ -226,13 +437,16 @@ export default function WithdrawForm({
               <button
                 className="flex-1 py-3 px-6 bg-primary text-white rounded-xl font-medium hover:bg-primary-dark transition-colors disabled:opacity-50"
                 onClick={handleSubmit}
-                disabled={isProcessing || !address}
+                disabled={isProcessing || isSubmitting || !address || !amount || parseFloat(amount) <= 0 || parseFloat(amount) > availableProfits}
+                title={parseFloat(amount) > availableProfits ? 'المبلغ المطلوب سحبه يتجاوز المكافآت المتاحة' : ''}
               >
-                {isProcessing ? (
+                {isProcessing || isSubmitting ? (
                   <div className="flex items-center justify-center">
                     <FaSpinner className="animate-spin ml-2" />
                     <span>جارٍ المعالجة...</span>
                   </div>
+                ) : parseFloat(amount) > availableProfits ? (
+                  'المبلغ يتجاوز المكافآت المتاحة'
                 ) : (
                   'تأكيد السحب'
                 )}
@@ -245,6 +459,8 @@ export default function WithdrawForm({
                 <div>
                   <h4 className="font-medium mb-2">تنبيهات أمنية</h4>
                   <ul className="text-sm space-y-1 text-gray-400">
+                    <li>• يمكنك فقط سحب المكافآت وليس مبلغ الإيداع الأصلي</li>
+                    <li>• لا يمكن إنشاء طلب سحب جديد حتى تتم معالجة الطلب السابق</li>
                     <li>• تأكد من صحة عنوان المحفظة قبل التأكيد</li>
                     <li>• لا يمكن التراجع عن عملية السحب بعد تأكيدها</li>
                     <li>• قد تستغرق معالجة السحب من 24 إلى 48 ساعة</li>

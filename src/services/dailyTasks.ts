@@ -382,32 +382,8 @@ export const getUserTaskRewards = async (userId: string) => {
   }
 };
 
-/**
- * الحصول على عدد المروجين النشطين للمستخدم (الإحالات المباشرة النشطة)
- * هذه وظيفة داخلية لتجنب الاعتماد الدائري مع ملف referral.ts
- */
-const getActivePromotersCountInternal = async (userId: string): Promise<number> => {
-  try {
-    // استعلام للحصول على الإحالات المباشرة فقط
-    const referralsQuery = query(
-      collection(db, 'referrals'),
-      where('referrerId', '==', userId)
-    );
-
-    const referralsSnapshot = await getDocs(referralsQuery);
-
-    // تصفية النتائج في الذاكرة
-    const activePromoters = referralsSnapshot.docs.filter(doc => {
-      const data = doc.data();
-      return (data.level === 1 || !data.level) && data.status === 'active';
-    });
-
-    return activePromoters.length;
-  } catch (error) {
-    console.error('Error getting active promoters count:', error);
-    return 0;
-  }
-};
+// استيراد وظيفة الحصول على عدد المروجين النشطين من ملف referral.ts
+import { getActivePromotersCount } from './referral';
 
 /**
  * التحقق من أهلية المستخدم للترقية إلى مستوى معين
@@ -448,7 +424,7 @@ export const checkMembershipUpgradeEligibility = async (
     if (requiredPromoters > 0) {
       try {
         // الحصول على عدد المروجين (الإحالات المباشرة النشطة)
-        const promotersCount = await getActivePromotersCountInternal(userId);
+        const promotersCount = await getActivePromotersCount(userId);
 
         if (promotersCount < requiredPromoters) {
           return {

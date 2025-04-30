@@ -70,7 +70,7 @@ export default function BarChart({
   }
 
   // حساب القيم القصوى
-  const maxValue = Math.max(...data.map(d => d.value));
+  const maxValue = Math.max(...data.map(d => d.value), 0.1); // استخدام 0.1 كحد أدنى لتجنب القسمة على صفر
   const padding = 40;
   const chartWidth = dimensions.width - padding * 2;
   const chartHeight = dimensions.height - padding * 2;
@@ -85,23 +85,33 @@ export default function BarChart({
 
   // إنشاء الأعمدة
   const bars = data.map((d, i) => {
-    const value = d.value;
+    // التأكد من أن القيمة رقم صالح
+    const value = isNaN(d.value) ? 0 : d.value;
     const normalizedValue = (value / maxValue) * (horizontal ? chartWidth : chartHeight);
-    
+
     const x = horizontal
       ? padding
       : padding + i * (barWidth + barGap) + barGap / 2;
-    
+
     const y = horizontal
       ? padding + i * (barWidth + barGap) + barGap / 2
       : padding + chartHeight - normalizedValue;
-    
+
     const width = horizontal ? normalizedValue : barWidth;
     const height = horizontal ? barWidth : normalizedValue;
-    
+
     const barColor = colors ? colors[i % colors.length] : d.color || color;
-    
-    return { x, y, width, height, value, label: d.label, color: barColor };
+
+    // التأكد من أن جميع القيم أرقام صالحة
+    return {
+      x: isNaN(x) ? padding : x,
+      y: isNaN(y) ? padding : y,
+      width: isNaN(width) ? 0 : width,
+      height: isNaN(height) ? 0 : height,
+      value,
+      label: d.label,
+      color: barColor
+    };
   });
 
   return (
@@ -153,19 +163,25 @@ export default function BarChart({
 
         {/* قيم الأعمدة */}
         {showValues && bars.map((bar, i) => {
+          // التحقق من أن القيمة رقم صالح
+          if (isNaN(bar.value)) return null;
+
           const valueX = horizontal
             ? bar.x + bar.width + 5
             : bar.x + bar.width / 2;
-          
+
           const valueY = horizontal
             ? bar.y + bar.height / 2 + 5
             : bar.y - 10;
-          
+
+          // التحقق من أن الإحداثيات أرقام صالحة
+          if (isNaN(valueX) || isNaN(valueY)) return null;
+
           return (
             <motion.text
               key={`value-${i}`}
-              x={valueX}
-              y={valueY}
+              x={valueX.toString()} // تحويل إلى سلسلة نصية لتجنب أخطاء الخصائص
+              y={valueY.toString()} // تحويل إلى سلسلة نصية لتجنب أخطاء الخصائص
               textAnchor={horizontal ? "start" : "middle"}
               dominantBaseline={horizontal ? "middle" : "auto"}
               fontSize="12"
@@ -185,23 +201,26 @@ export default function BarChart({
           const labelX = horizontal
             ? padding - 5
             : bar.x + bar.width / 2;
-          
+
           const labelY = horizontal
             ? bar.y + bar.height / 2
             : padding + chartHeight + 15;
-          
+
+          // التحقق من أن الإحداثيات أرقام صالحة
+          if (isNaN(labelX) || isNaN(labelY)) return null;
+
           return (
             <text
               key={`label-${i}`}
-              x={labelX}
-              y={labelY}
+              x={labelX.toString()} // تحويل إلى سلسلة نصية لتجنب أخطاء الخصائص
+              y={labelY.toString()} // تحويل إلى سلسلة نصية لتجنب أخطاء الخصائص
               textAnchor={horizontal ? "end" : "middle"}
               dominantBaseline={horizontal ? "middle" : "auto"}
               fontSize="10"
               fill="currentColor"
               className="text-foreground-muted"
             >
-              {bar.label}
+              {bar.label || ''}
             </text>
           );
         })}
@@ -210,11 +229,15 @@ export default function BarChart({
         {!horizontal && Array.from({ length: 5 }).map((_, i) => {
           const y = padding + (i / 4) * chartHeight;
           const value = maxValue - (i / 4) * maxValue;
+
+          // التحقق من أن الإحداثيات والقيم أرقام صالحة
+          if (isNaN(y) || isNaN(value)) return null;
+
           return (
             <text
               key={`y-label-${i}`}
-              x={padding - 5}
-              y={y + 3}
+              x={(padding - 5).toString()}
+              y={(y + 3).toString()}
               textAnchor="end"
               fontSize="10"
               fill="currentColor"
@@ -229,11 +252,15 @@ export default function BarChart({
         {horizontal && Array.from({ length: 5 }).map((_, i) => {
           const x = padding + (i / 4) * chartWidth;
           const value = (i / 4) * maxValue;
+
+          // التحقق من أن الإحداثيات والقيم أرقام صالحة
+          if (isNaN(x) || isNaN(value)) return null;
+
           return (
             <text
               key={`x-label-${i}`}
-              x={x}
-              y={padding + chartHeight + 15}
+              x={x.toString()}
+              y={(padding + chartHeight + 15).toString()}
               textAnchor="middle"
               fontSize="10"
               fill="currentColor"

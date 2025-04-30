@@ -16,15 +16,15 @@ function Step({ icon, title, description, number, delay }: StepProps) {
   return (
     <FadeInView direction="up" delay={delay}>
       <div className="relative">
-        <div className="card card-primary p-6 h-full">
-          <div className="absolute -top-5 -right-5 w-12 h-12 rounded-full bg-primary text-foreground-inverted flex items-center justify-center font-bold text-lg">
+        <div className="card card-primary p-4 sm:p-6 h-full">
+          <div className="absolute -top-3 sm:-top-5 -right-3 sm:-right-5 w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-primary text-foreground-inverted flex items-center justify-center font-bold text-base sm:text-lg">
             {number}
           </div>
-          <div className="p-4 rounded-full bg-primary/20 text-primary inline-block mb-4">
+          <div className="p-3 sm:p-4 rounded-full bg-primary/20 text-primary inline-block mb-3 sm:mb-4">
             {icon}
           </div>
-          <h3 className="text-xl font-bold mb-2">{title}</h3>
-          <p className="text-foreground-muted">{description}</p>
+          <h3 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2">{title}</h3>
+          <p className="text-foreground-muted text-sm sm:text-base">{description}</p>
         </div>
       </div>
     </FadeInView>
@@ -64,18 +64,18 @@ export default function HowItWorksSection() {
   ];
 
   return (
-    <section className="py-20">
+    <section className="py-12 sm:py-16 md:py-20">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
+        <div className="text-center mb-10 sm:mb-16">
           <FadeInView direction="up">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">كيف تبدأ الاستثمار؟</h2>
-            <p className="text-xl text-foreground-muted max-w-2xl mx-auto">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">كيف تبدأ الاستثمار؟</h2>
+            <p className="text-base sm:text-lg md:text-xl text-foreground-muted max-w-2xl mx-auto">
               اتبع هذه الخطوات البسيطة لبدء رحلتك الاستثمارية مع منصة Iseix
             </p>
           </FadeInView>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 md:gap-10">
           {steps.map((step, index) => (
             <Step
               key={index}
@@ -88,13 +88,13 @@ export default function HowItWorksSection() {
           ))}
         </div>
 
-        <div className="mt-16 text-center">
+        <div className="mt-10 sm:mt-16 text-center">
           <FadeInView direction="up" delay={0.5}>
             <div className="inline-block relative">
               <div className="absolute inset-0 bg-gradient-to-r from-primary to-secondary blur-xl opacity-30 rounded-full transform scale-110"></div>
               <a
                 href="/register"
-                className="btn btn-primary py-3 px-8 text-lg relative"
+                className="btn btn-primary py-3 px-6 sm:px-8 text-base sm:text-lg relative"
               >
                 ابدأ الاستثمار الآن
               </a>

@@ -4,6 +4,7 @@ import { createContext, useContext, useState, ReactNode, useEffect } from 'react
 import AnimatedAlert from '@/components/ui/AnimatedAlert';
 import { ToastContainer } from '@/components/ui/MobileToast';
 import { useSoundEffects } from '@/components/ui/SoundEffects';
+import CenteredModal from '@/components/ui/CenteredModal';
 
 type AlertType = 'success' | 'error' | 'warning' | 'info';
 
@@ -13,20 +14,34 @@ interface Alert {
   message: string;
 }
 
+interface ModalAlert {
+  type: AlertType;
+  title: string;
+  message: string;
+  actionText?: string;
+  onAction?: () => void;
+}
+
 interface AlertContextType {
   alerts: Alert[];
   showAlert: (type: AlertType, message: string, duration?: number) => void;
+  showModalAlert: (type: AlertType, title: string, message: string, actionText?: string, onAction?: () => void) => void;
   removeAlert: (id: string) => void;
+  closeModal: () => void;
 }
 
 const AlertContext = createContext<AlertContextType>({
   alerts: [],
   showAlert: () => {},
-  removeAlert: () => {}
+  showModalAlert: () => {},
+  removeAlert: () => {},
+  closeModal: () => {}
 });
 
 export const AlertProvider = ({ children }: { children: ReactNode }) => {
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [modalAlert, setModalAlert] = useState<ModalAlert | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { playSound } = useSoundEffects();
 
   const showAlert = (type: AlertType, message: string, duration = 5000) => {
@@ -54,6 +69,29 @@ export const AlertProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const showModalAlert = (type: AlertType, title: string, message: string, actionText?: string, onAction?: () => void) => {
+    setModalAlert({ type, title, message, actionText, onAction });
+    setIsModalOpen(true);
+
+    // تشغيل صوت التنبيه
+    switch (type) {
+      case 'success':
+        playSound('success');
+        break;
+      case 'error':
+        playSound('error');
+        break;
+      case 'warning':
+      case 'info':
+        playSound('notification');
+        break;
+    }
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+  };
+
   const removeAlert = (id: string) => {
     setAlerts(prev => prev.filter(alert => alert.id !== id));
   };
@@ -78,7 +116,7 @@ export const AlertProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <AlertContext.Provider value={{ alerts, showAlert, removeAlert }}>
+    <AlertContext.Provider value={{ alerts, showAlert, showModalAlert, removeAlert, closeModal }}>
       {children}
 
       {/* تنبيهات سطح المكتب */}
@@ -99,6 +137,19 @@ export const AlertProvider = ({ children }: { children: ReactNode }) => {
         position="bottom"
         onClose={removeAlert}
       />
+
+      {/* النافذة المنبثقة المركزية */}
+      {modalAlert && (
+        <CenteredModal
+          type={modalAlert.type}
+          title={modalAlert.title}
+          message={modalAlert.message}
+          isOpen={isModalOpen}
+          onClose={closeModal}
+          actionText={modalAlert.actionText}
+          onAction={modalAlert.onAction}
+        />
+      )}
     </AlertContext.Provider>
   );
 };

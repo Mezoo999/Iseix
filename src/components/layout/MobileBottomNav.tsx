@@ -52,29 +52,29 @@ export default function MobileBottomNav() {
     { path: '/wallet', label: 'المحفظة', icon: <FaWallet /> },
     { path: '/tasks', label: 'المهام', icon: <FaTasks /> },
     { path: '/referrals', label: 'الإحالات', icon: <FaUsers /> },
-    { path: '/dashboard', label: 'أنا', icon: <FaUser /> }
+    { path: '/dashboard', label: 'حسابي', icon: <FaUser /> }
   ];
 
-  // إذا لم يكن المستخدم مسجلاً أو كان الجهاز ليس محمولاً أو جهاز لوحي، لا تعرض الشريط
-  if (!currentUser || (!isMobile && !isTablet)) {
+  // عرض الشريط دائمًا على الأجهزة المحمولة، وعلى الأجهزة الأخرى إذا كان عرض الشاشة أقل من 768 بكسل
+  if (!currentUser) {
     return null;
   }
 
   return (
     <motion.nav
-      className="fixed bottom-0 left-0 right-0 bg-background border-t border-background-lighter z-40 shadow-lg"
+      className="fixed bottom-0 left-0 right-0 bg-background-dark/90 backdrop-blur-lg border-t border-primary/20 z-40 shadow-lg"
       initial={{ y: 100 }}
       animate={{ y: isVisible ? 0 : 100 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="flex justify-around items-center h-16">
+      <div className="flex justify-around items-center h-16 px-2">
         {navItems.map((item) => {
           // تحسين تحديد الصفحة النشطة ليشمل الصفحات الفرعية
           const isActive = pathname === item.path ||
                           (item.path !== '/' && pathname?.startsWith(item.path));
 
           return (
-            <button
+            <motion.button
               key={item.path}
               onClick={() => {
                 // تجنب التوجيه إذا كان المستخدم بالفعل في نفس الصفحة
@@ -83,37 +83,58 @@ export default function MobileBottomNav() {
                   window.location.href = item.path;
                 }
               }}
-              className="flex flex-col items-center justify-center w-full h-full bg-transparent border-none cursor-pointer"
+              className={`flex flex-col items-center justify-center w-full h-full bg-transparent border-none cursor-pointer relative ${
+                isActive ? 'z-10' : ''
+              }`}
               aria-label={item.label}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              <motion.div
-                className={`flex flex-col items-center justify-center relative ${
-                  isActive ? 'text-primary' : 'text-foreground-muted'
-                }`}
-                whileTap={{ scale: 0.9 }}
-              >
-                <div className={`text-xl mb-1 ${isActive ? 'text-primary' : 'text-foreground-muted'}`}>
-                  {item.icon}
-                </div>
-                <span className={`text-xs ${isActive ? 'font-bold' : ''}`}>
-                  {item.label}
-                </span>
+              {/* خلفية العنصر النشط */}
+              {isActive && (
+                <motion.div
+                  className="absolute inset-0 bg-primary/10 rounded-xl"
+                  layoutId="activeNavItemBackground"
+                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                />
+              )}
 
-                {isActive && (
-                  <motion.div
-                    className="absolute -top-2 h-1 w-10 bg-primary rounded-b-full"
-                    layoutId="bottomNavIndicator"
-                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                  />
-                )}
-              </motion.div>
-            </button>
+              <div className="flex flex-col items-center justify-center relative py-1 px-3">
+                <motion.div
+                  className={`text-xl mb-1 ${isActive ? 'text-primary' : 'text-foreground-muted'}`}
+                  animate={{
+                    scale: isActive ? 1.1 : 1,
+                    y: isActive ? -2 : 0
+                  }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                >
+                  {item.icon}
+
+                  {/* تأثير توهج خلف الأيقونة النشطة */}
+                  {isActive && (
+                    <motion.div
+                      className="absolute inset-0 bg-primary/20 rounded-full blur-md -z-10"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    />
+                  )}
+                </motion.div>
+
+                <motion.span
+                  className={`text-xs ${isActive ? 'font-bold text-primary' : 'text-foreground-muted'}`}
+                  animate={{ opacity: isActive ? 1 : 0.7 }}
+                >
+                  {item.label}
+                </motion.span>
+              </div>
+            </motion.button>
           );
         })}
       </div>
 
       {/* مساحة إضافية في الأسفل للأجهزة التي تحتوي على شريط تنقل في الأسفل */}
-      <div className="h-safe-area-bottom bg-background"></div>
+      <div className="h-safe-area-bottom bg-background-dark/90 backdrop-blur-lg"></div>
     </motion.nav>
   );
 }

@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "next lint",
     "clean": "rimraf .next",
-    "dev:clean": "rimraf .next && next dev"
+    "dev:clean": "rimraf .next && next dev",
+    "export": "next build && next export",
+    "build:static": "next build",
+    "deploy": "next build && firebase deploy --only hosting"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.2",

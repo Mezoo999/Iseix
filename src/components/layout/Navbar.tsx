@@ -94,8 +94,8 @@ const Navbar = () => {
           </motion.div>
         </motion.div>
 
-        {/* قائمة التنقل للشاشات الكبيرة */}
-        <nav className="hidden md:flex items-center space-x-1 space-x-reverse">
+        {/* قائمة التنقل للشاشات الكبيرة والصغيرة */}
+        <nav className="flex items-center space-x-1 space-x-reverse">
           {navLinks.map((link) => (
             <button
               key={link.href}
@@ -137,7 +137,7 @@ const Navbar = () => {
         </nav>
 
         {/* أزرار تسجيل الدخول / لوحة التحكم */}
-        <div className="hidden md:flex items-center space-x-3 space-x-reverse">
+        <div className="flex items-center space-x-3 space-x-reverse">
           {currentUser ? (
             <div className="flex items-center">
               {/* مكون الإشعارات الذكية */}
@@ -251,16 +251,7 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* زر القائمة للشاشات الصغيرة */}
-        <div className="md:hidden">
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="text-foreground p-2"
-            aria-label="Toggle menu"
-          >
-            <FaBars size={24} />
-          </button>
-        </div>
+        {/* زر القائمة للشاشات الصغيرة - تم إزالته لأننا نعرض القائمة دائمًا */}
       </div>
 
       {/* القائمة المتحركة للشاشات الصغيرة */}

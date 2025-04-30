@@ -12,7 +12,7 @@ import PageTemplate from '@/components/layout/PageTemplate';
 import AutoCompoundInterest from '@/components/investment/AutoCompoundInterest';
 import DailyTasksCard from '@/components/tasks/DailyTasksCard';
 import ReferralStatsCard from '@/components/referral/ReferralStatsCard';
-import StatCard from '@/components/dashboard/StatCard';
+import StatCard from '@/components/ui/StatCard';
 import { PageLoader } from '@/components/ui/Loaders';
 import { useAuth } from '@/contexts/AuthContext';
 import { AlertProvider } from '@/contexts/AlertContext';

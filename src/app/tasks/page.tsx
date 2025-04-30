@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaTasks, FaChartLine, FaInfoCircle, FaTrophy, FaClock } from 'react-icons/fa';
+import { FaTasks, FaChartLine, FaInfoCircle, FaTrophy, FaClock, FaCoins, FaPercentage } from 'react-icons/fa';
 
 import PageTemplate from '@/components/layout/PageTemplate';
 import DailyTasksCard from '@/components/tasks/DailyTasksCard';
@@ -14,6 +14,10 @@ import { AlertProvider, useAlert } from '@/contexts/AlertContext';
 import { getUserTaskRewards, MembershipLevel, PROFIT_RATES, MEMBERSHIP_LEVEL_NAMES } from '@/services/dailyTasks';
 import { FadeInView } from '@/components/ui/AnimatedElements';
 import Card from '@/components/ui/Card';
+import PageHeader from '@/components/ui/PageHeader';
+import Header from '@/components/ui/Header';
+import StatsGrid from '@/components/ui/StatsGrid';
+import InfoCard from '@/components/ui/InfoCard';
 
 export default function TasksPage() {
   return (
@@ -88,77 +92,58 @@ function TasksContent() {
 
   const profitRateDisplay = `${profitRateRange.min}% ~ ${profitRateRange.max}%`;
 
+  // تحضير إحصائيات الرأس
+  const headerStats = [
+    {
+      label: 'المهام المكتملة',
+      value: taskRewards.length,
+      icon: <FaTasks className="text-primary" />,
+      color: 'primary'
+    },
+    {
+      label: 'إجمالي المكافآت',
+      value: `${calculateTotalRewards().toFixed(2)} USDT`,
+      icon: <FaCoins className="text-success" />,
+      color: 'success'
+    },
+    {
+      label: 'معدل الربح',
+      value: profitRateDisplay,
+      icon: <FaPercentage className="text-info" />,
+      color: 'info'
+    },
+    {
+      label: 'مستوى العضوية',
+      value: MEMBERSHIP_LEVEL_NAMES[membershipLevel],
+      icon: <FaTrophy className="text-secondary" />,
+      color: 'secondary'
+    }
+  ];
+
+  // نص المعلومات
+  const infoText = "يمكنك إكمال 3 مهام يوميًا للحصول على مكافآت إضافية. يتم إعادة تعيين المهام تلقائيًا كل 24 ساعة. معدل الربح يختلف حسب مستوى العضوية الخاص بك.";
+
   return (
-    <PageTemplate
-      title="المهام اليومية"
-      description="أكمل المهام اليومية للحصول على مكافآت إضافية وزيادة أرباحك"
-      icon={<FaTasks className="text-white text-xl" />}
-    >
-      {/* معلومات المهام اليومية */}
-      <Card
-        className="mb-6"
-        variant="info"
-        icon={<FaInfoCircle />}
-        title="كيف تعمل المهام اليومية؟"
-        delay={0.2}
-      >
-        <ul className="text-sm space-y-1 pr-5 list-disc">
-          <li>يمكنك إكمال <span className="font-bold">3</span> مهام يوميًا</li>
-          <li>معدل الربح: <span className="font-bold">{profitRateDisplay}</span> لكل مهمة</li>
-          <li>يتم إعادة تعيين المهام تلقائيًا كل 24 ساعة</li>
-        </ul>
-      </Card>
+    <PageTemplate>
+      {/* رأس الصفحة الثابت */}
+      <Header
+        title="المهام اليومية"
+        subtitle="أكمل المهام للحصول على مكافآت يومية"
+        icon={<FaTasks className="text-xl" />}
+        infoText={infoText}
+        stats={headerStats}
+      />
+
+      {/* رأس الصفحة الرئيسي */}
+      <PageHeader
+        title="المهام اليومية"
+        subtitle="أكمل المهام اليومية للحصول على مكافآت إضافية وزيادة أرباحك"
+        icon={<FaTasks className="text-2xl" />}
+        infoText={infoText}
+      />
 
       {/* إحصائيات المهام */}
-      <div className="mb-8">
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <Card variant="primary" delay={0.3}>
-            <div className="flex items-center">
-              <div className="p-2 rounded-full bg-primary/20 ml-2">
-                <FaTasks className="text-primary text-lg" />
-              </div>
-              <div>
-                <h3 className="text-foreground-muted text-xs">المهام المكتملة</h3>
-                <p className="text-xl font-bold">{taskRewards.length}</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card variant="success" delay={0.35}>
-            <div className="flex items-center">
-              <div className="p-2 rounded-full bg-success/20 ml-2">
-                <FaChartLine className="text-success text-lg" />
-              </div>
-              <div>
-                <h3 className="text-foreground-muted text-xs">إجمالي المكافآت</h3>
-                <p className="text-xl font-bold">{calculateTotalRewards().toFixed(2)}</p>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        <Card
-          variant="secondary"
-          delay={0.4}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="p-2 rounded-full bg-secondary/20 ml-2">
-                <FaTrophy className="text-secondary text-lg" />
-              </div>
-              <div>
-                <h3 className="text-foreground-muted text-xs">مستوى العضوية</h3>
-                <p className="text-lg font-bold">
-                  {MEMBERSHIP_LEVEL_NAMES[membershipLevel]}
-                </p>
-              </div>
-            </div>
-            <div className="bg-secondary/10 px-2 py-1 rounded text-xs">
-              {profitRateDisplay}
-            </div>
-          </div>
-        </Card>
-      </div>
+      <StatsGrid stats={headerStats} columns={4} variant="glass" />
 
       {/* المهام اليومية */}
       <div className="mb-8">
@@ -168,19 +153,24 @@ function TasksContent() {
       </div>
 
       {/* معلومات إعادة تعيين المهام */}
-      <Card
-        className="mb-8"
-        variant="primary"
+      <InfoCard
         title="إعادة تعيين المهام"
-        icon={<FaClock className="text-primary" />}
-        delay={0.4}
+        icon={<FaClock />}
+        variant="primary"
+        expandable={true}
+        defaultExpanded={false}
       >
-        <p className="text-sm text-foreground-muted mb-4">يتم إعادة تعيين المهام اليومية عند منتصف الليل</p>
+        <p className="mb-4">يتم إعادة تعيين المهام اليومية عند منتصف الليل لتتمكن من الحصول على مكافآت جديدة كل يوم.</p>
 
-        <div className="bg-background-light/30 p-4 rounded-lg">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-foreground-muted">المهام المكتملة اليوم:</span>
-            <span className="font-bold">{taskRewards.filter(r => {
+        <div className="bg-background-dark/50 p-4 rounded-lg border border-primary/20">
+          <div className="flex justify-between items-center mb-3">
+            <div className="flex items-center">
+              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center ml-2">
+                <FaTasks className="text-primary text-sm" />
+              </div>
+              <span>المهام المكتملة اليوم:</span>
+            </div>
+            <span className="font-bold bg-primary/10 px-2 py-1 rounded-lg">{taskRewards.filter(r => {
               const today = new Date();
               today.setHours(0, 0, 0, 0);
               const rewardDate = r.timestamp?.toDate ? new Date(r.timestamp.toDate()) : new Date(r.timestamp);
@@ -190,8 +180,13 @@ function TasksContent() {
           </div>
 
           <div className="flex justify-between items-center">
-            <span className="text-foreground-muted">المهام المتاحة:</span>
-            <span className="font-bold text-primary">{Math.max(0, 3 - taskRewards.filter(r => {
+            <div className="flex items-center">
+              <div className="w-7 h-7 rounded-full bg-success/10 flex items-center justify-center ml-2">
+                <FaCoins className="text-success text-sm" />
+              </div>
+              <span>المهام المتاحة:</span>
+            </div>
+            <span className="font-bold bg-success/10 px-2 py-1 rounded-lg text-success">{Math.max(0, 3 - taskRewards.filter(r => {
               const today = new Date();
               today.setHours(0, 0, 0, 0);
               const rewardDate = r.timestamp?.toDate ? new Date(r.timestamp.toDate()) : new Date(r.timestamp);
@@ -200,7 +195,7 @@ function TasksContent() {
             }).length)}</span>
           </div>
         </div>
-      </Card>
+      </InfoCard>
 
       {/* سجل المكافآت */}
       <div className="mb-8">

@@ -5,7 +5,7 @@ import {
   FaUsers, FaMoneyBillWave, FaExchangeAlt, FaUserTag, FaChartLine,
   FaWallet, FaTasks, FaCrown, FaCog, FaBell, FaSearch, FaCheck,
   FaTimes, FaEdit, FaBan, FaTrash, FaUserShield, FaBolt, FaUserPlus,
-  FaSpinner, FaArrowUp
+  FaSpinner, FaArrowUp, FaPlus
 } from 'react-icons/fa';
 import { useAuth } from '@/contexts/AuthContext';
 import { collection, getDocs, query, where, orderBy, limit, Timestamp, doc, updateDoc, getDoc, serverTimestamp, addDoc } from 'firebase/firestore';
@@ -13,7 +13,7 @@ import { db } from '@/firebase/config';
 import AdminProtected from '@/components/admin/AdminProtected';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminCard from '@/components/admin/AdminCard';
-import StatCard from '@/components/admin/StatCard';
+import StatCard from '@/components/ui/StatCard';
 import { useRouter } from 'next/navigation';
 
 // استيراد مكونات الرسوم البيانية
@@ -323,6 +323,14 @@ export default function AdminDashboard() {
               <FaCheck className="ml-2" />
               السحوبات المعلقة ({stats.pendingWithdrawals})
             </button>
+
+            <button
+              className="w-full p-3 bg-secondary text-white rounded-lg hover:bg-secondary-dark transition-colors flex items-center justify-center"
+              onClick={() => router.push('/admin/test-data')}
+            >
+              <FaPlus className="ml-2" />
+              إنشاء بيانات اختبارية
+            </button>
           </div>
         </div>
       </div>
@@ -594,7 +602,7 @@ export default function AdminDashboard() {
               >
                 <LineChart
                   data={stats.depositsByDay}
-                  color="#10b981"
+                  color="#3b82f6"
                   showArea={true}
                 />
               </AdminChart>
@@ -607,7 +615,7 @@ export default function AdminDashboard() {
               >
                 <PieChart
                   data={stats.usersByMembership}
-                  colors={['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']}
+                  colors={['#3b82f6', '#2563EB', '#1D4ED8', '#1E40AF', '#1E3A8A', '#172554']}
                 />
               </AdminChart>
             </div>
@@ -621,7 +629,7 @@ export default function AdminDashboard() {
               >
                 <BarChart
                   data={stats.tasksByDay}
-                  color="#f59e0b"
+                  color="#3b82f6"
                 />
               </AdminChart>
 
@@ -634,7 +642,7 @@ export default function AdminDashboard() {
                 <BarChart
                   data={stats.topReferrers}
                   horizontal={true}
-                  colors={['#3b82f6', '#4f86f7', '#6290f8', '#769af9', '#89a4fa']}
+                  colors={['#3b82f6', '#2563EB', '#1D4ED8', '#1E40AF', '#1E3A8A']}
                 />
               </AdminChart>
             </div>

@@ -427,11 +427,11 @@ body {
 }
 
 .table th {
-  background-color: rgba(19, 43, 94, 0.7);
+  background-color: var(--primary);
   padding: 1rem;
   font-weight: bold;
   color: var(--foreground);
-  border-bottom: 2px solid var(--primary);
+  border-bottom: 2px solid var(--primary-dark);
 }
 
 .table td {
@@ -441,10 +441,15 @@ body {
 
 .table tr:hover {
   background-color: rgba(29, 58, 125, 0.4);
+  transition: background-color 0.2s ease;
 }
 
 .table-striped tr:nth-child(even) {
   background-color: rgba(19, 43, 94, 0.3);
+}
+
+.table-striped tr:nth-child(odd) {
+  background-color: rgba(29, 58, 125, 0.1);
 }
 
 /* تنسيقات النماذج والإدخالات */

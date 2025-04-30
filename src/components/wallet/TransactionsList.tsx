@@ -146,15 +146,15 @@ export default function TransactionsList({
   return (
     <div>
       {showFilters && (
-        <div className="mb-4">
+        <div className="mb-3 sm:mb-4">
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
               <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <FaSearch className="text-foreground-muted text-sm" />
+                <FaSearch className="text-foreground-muted text-xs sm:text-sm" />
               </div>
               <input
                 type="text"
-                className="w-full bg-blue-950/30 border border-blue-500/30 rounded-lg p-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-foreground"
+                className="w-full bg-blue-950/30 border border-blue-500/30 rounded-lg p-2 pr-10 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-foreground"
                 placeholder="بحث في المعاملات..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -163,10 +163,10 @@ export default function TransactionsList({
 
             <div className="relative">
               <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <FaFilter className="text-foreground-muted text-sm" />
+                <FaFilter className="text-foreground-muted text-xs sm:text-sm" />
               </div>
               <select
-                className="bg-blue-950/30 border border-blue-500/30 rounded-lg p-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none text-foreground"
+                className="bg-blue-950/30 border border-blue-500/30 rounded-lg p-2 pr-10 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none text-foreground"
                 value={filter}
                 onChange={(e) => handleFilterChange(e.target.value)}
               >
@@ -184,14 +184,14 @@ export default function TransactionsList({
       )}
 
       {isLoading ? (
-        <div className="text-center py-6">
-          <CircleLoader color="primary" size="md" />
-          <p className="text-foreground-muted mt-2 text-sm">جاري تحميل المعاملات...</p>
+        <div className="text-center py-4 sm:py-6">
+          <CircleLoader color="primary" size="sm" />
+          <p className="text-foreground-muted mt-2 text-xs sm:text-sm">جاري تحميل المعاملات...</p>
         </div>
       ) : filteredTransactions.length === 0 ? (
-        <div className="text-center py-8 bg-background-dark rounded-lg border border-primary/20">
-          <FaExchangeAlt className="text-primary text-3xl mx-auto mb-2 opacity-50" />
-          <p className="text-foreground-muted text-sm">
+        <div className="text-center py-6 sm:py-8 bg-background-dark rounded-lg border border-primary/20">
+          <FaExchangeAlt className="text-primary text-2xl sm:text-3xl mx-auto mb-2 opacity-50" />
+          <p className="text-foreground-muted text-xs sm:text-sm">
             {searchTerm || filter !== 'all' ? 'لا توجد معاملات تطابق معايير البحث' : 'لم تقم بأي معاملات بعد'}
           </p>
         </div>

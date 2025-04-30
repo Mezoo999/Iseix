@@ -5,15 +5,11 @@ import {
   sendPasswordResetEmail,
   sendEmailVerification,
   updateProfile,
-  updatePassword,
-  reauthenticateWithCredential,
-  EmailAuthProvider,
-  User,
   UserCredential
 } from 'firebase/auth';
-import { doc, setDoc, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from './config';
+import { auth } from './config';
 import { getUserIdFromReferralCode, createReferral, autoUpdateMembershipLevel } from '@/services/referral';
+import { createOrUpdateUserData, updateUserProfile, updateUserPassword, generateReferralCode } from '@/services/users';
 
 // تسجيل مستخدم جديد
 export const registerUser = async (
@@ -43,12 +39,10 @@ export const registerUser = async (
     const newReferralCode = generateReferralCode(user.uid);
 
     // إنشاء وثيقة المستخدم في Firestore
-    await setDoc(doc(db, 'users', user.uid), {
+    await createOrUpdateUserData(user.uid, {
       uid: user.uid,
       email,
       displayName,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
       isAdmin: false,
       balances: {
         USDT: 0,
@@ -61,7 +55,8 @@ export const registerUser = async (
       totalReferralEarnings: 0,
       referralCode: newReferralCode,
       referredBy: referrerId,
-      emailVerified: false
+      emailVerified: false,
+      membershipLevel: 0
     });
 
     // إنشاء إحالة إذا كان هناك رمز إحالة صالح
@@ -145,55 +140,7 @@ export const resetPassword = async (email: string): Promise<void> => {
 };
 
 // تحديث الملف الشخصي للمستخدم
-export const updateUserProfile = async (userData: {
-  displayName?: string;
-  phoneNumber?: string;
-}): Promise<void> => {
-  try {
-    const user = auth.currentUser;
-    if (!user) throw new Error('User not authenticated');
-
-    // تحديث الاسم في Firebase Auth
-    if (userData.displayName) {
-      await updateProfile(user, { displayName: userData.displayName });
-    }
-
-    // تحديث البيانات في Firestore
-    const userRef = doc(db, 'users', user.uid);
-    await updateDoc(userRef, {
-      ...userData,
-      updatedAt: serverTimestamp()
-    });
-  } catch (error) {
-    console.error('Error updating user profile:', error);
-    throw error;
-  }
-};
+export { updateUserProfile } from '@/services/users';
 
 // تحديث كلمة مرور المستخدم
-export const updateUserPassword = async (
-  currentPassword: string,
-  newPassword: string
-): Promise<void> => {
-  try {
-    const user = auth.currentUser;
-    if (!user || !user.email) throw new Error('User not authenticated');
-
-    // إعادة المصادقة قبل تغيير كلمة المرور
-    const credential = EmailAuthProvider.credential(user.email, currentPassword);
-    await reauthenticateWithCredential(user, credential);
-
-    // تحديث كلمة المرور
-    await updatePassword(user, newPassword);
-  } catch (error) {
-    console.error('Error updating password:', error);
-    throw error;
-  }
-};
-
-// إنشاء رمز إحالة فريد
-const generateReferralCode = (uid: string): string => {
-  // إنشاء رمز إحالة من معرف المستخدم + أحرف عشوائية
-  const randomChars = Math.random().toString(36).substring(2, 8).toUpperCase();
-  return `${randomChars}${uid.substring(0, 4)}`;
-};
+export { updateUserPassword } from '@/services/users';

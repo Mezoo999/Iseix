@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaUsers, FaSearch, FaEdit, FaBan, FaCheck, FaTrash, FaUserPlus, FaMoneyBillWave, FaCrown, FaSpinner, FaEnvelope, FaUser, FaLock, FaCoins } from 'react-icons/fa';
+import { FaUsers, FaSearch, FaEdit, FaBan, FaCheck, FaTrash, FaUserPlus, FaMoneyBillWave, FaCrown, FaSpinner, FaEnvelope, FaUser, FaLock, FaCoins, FaDownload, FaFilter, FaBell, FaChartBar, FaExchangeAlt, FaWallet, FaCalendarAlt, FaUserCog } from 'react-icons/fa';
 import { MembershipLevel, MEMBERSHIP_LEVEL_NAMES } from '@/services/dailyTasks';
-import AdminLayout from '@/components/admin/AdminLayout';
+// AdminLayout غير مستخدم
 import { useAuth } from '@/contexts/AuthContext';
 import { collection, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, limit, addDoc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase/config';
@@ -40,6 +40,43 @@ export default function AdminUsers() {
   const [isAddBalanceModalOpen, setIsAddBalanceModalOpen] = useState(false);
   const [isUpgradeMembershipModalOpen, setIsUpgradeMembershipModalOpen] = useState(false);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [isSendNotificationModalOpen, setIsSendNotificationModalOpen] = useState(false);
+  const [isUserDetailsModalOpen, setIsUserDetailsModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
+  // متغيرات للفلترة المتقدمة
+  const [membershipFilter, setMembershipFilter] = useState<number | ''>('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'blocked' | 'admin'>('all');
+  const [balanceFilter, setBalanceFilter] = useState<{ min: string; max: string }>({ min: '', max: '' });
+  const [dateFilter, setDateFilter] = useState<{ start: string; end: string }>({ start: '', end: '' });
+
+  // متغيرات للإشعارات
+  const [notificationData, setNotificationData] = useState({
+    title: '',
+    message: '',
+    type: 'info'
+  });
+
+  // متغيرات للإحصائيات
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeUsers: 0,
+    blockedUsers: 0,
+    adminUsers: 0,
+    totalBalance: 0,
+    totalDeposited: 0,
+    totalWithdrawn: 0,
+    membershipLevels: {
+      0: 0, // Basic
+      1: 0, // Silver
+      2: 0, // Gold
+      3: 0, // Platinum
+      4: 0, // Diamond
+      5: 0  // Elite
+    }
+  });
+
   const [balanceAmount, setBalanceAmount] = useState('');
   const [selectedMembershipLevel, setSelectedMembershipLevel] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -105,11 +142,219 @@ export default function AdminUsers() {
 
       setUsers(usersData);
       setFilteredUsers(usersData);
+
+      // حساب الإحصائيات
+      calculateStats(usersData);
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // حساب الإحصائيات
+  const calculateStats = (usersData: User[]) => {
+    const newStats = {
+      totalUsers: usersData.length,
+      activeUsers: usersData.filter(user => !user.isBlocked && !user.isAdmin).length,
+      blockedUsers: usersData.filter(user => user.isBlocked).length,
+      adminUsers: usersData.filter(user => user.isAdmin).length,
+      totalBalance: 0,
+      totalDeposited: 0,
+      totalWithdrawn: 0,
+      membershipLevels: {
+        0: 0, // Basic
+        1: 0, // Silver
+        2: 0, // Gold
+        3: 0, // Platinum
+        4: 0, // Diamond
+        5: 0  // Elite
+      }
+    };
+
+    // حساب إجماليات المبالغ
+    usersData.forEach(user => {
+      newStats.totalBalance += user.balances.USDT || 0;
+      newStats.totalDeposited += user.totalDeposited || 0;
+      newStats.totalWithdrawn += user.totalWithdrawn || 0;
+
+      // حساب عدد المستخدمين في كل مستوى عضوية
+      const level = user.membershipLevel || 0;
+      if (level >= 0 && level <= 5) {
+        newStats.membershipLevels[level as keyof typeof newStats.membershipLevels]++;
+      }
+    });
+
+    setStats(newStats);
+  };
+
+  // تصدير بيانات المستخدمين كملف CSV
+  const exportUsersToCSV = () => {
+    if (users.length === 0) return;
+
+    setIsExporting(true);
+
+    try {
+      // إنشاء رأس الجدول
+      const headers = ['معرف المستخدم', 'البريد الإلكتروني', 'الاسم', 'رمز الإحالة', 'مستوى العضوية', 'الرصيد', 'إجمالي الإيداعات', 'إجمالي السحوبات', 'الحالة', 'تاريخ التسجيل'];
+
+      // تحويل البيانات إلى تنسيق CSV
+      const csvData = filteredUsers.map(user => [
+        user.id,
+        user.email,
+        user.displayName,
+        user.referralCode,
+        getMembershipLevelName(user.membershipLevel),
+        user.balances.USDT.toFixed(2),
+        user.totalDeposited.toFixed(2),
+        user.totalWithdrawn.toFixed(2),
+        user.isAdmin ? 'مشرف' : user.isBlocked ? 'محظور' : 'نشط',
+        formatDate(user.createdAt)
+      ]);
+
+      // دمج الرأس والبيانات
+      const csvContent = [
+        headers.join(','),
+        ...csvData.map(row => row.join(','))
+      ].join('\n');
+
+      // إنشاء ملف للتنزيل
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `users-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error exporting data:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // تنسيق التاريخ
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return '';
+
+    try {
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      return date.toLocaleDateString('ar-SA', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return '';
+    }
+  };
+
+  // إرسال إشعار للمستخدم
+  const sendNotification = async () => {
+    if (!selectedUser || !notificationData.title || !notificationData.message) return;
+
+    setIsProcessing(true);
+
+    try {
+      // إنشاء إشعار جديد
+      await addDoc(collection(db, 'notifications'), {
+        userId: selectedUser.id,
+        title: notificationData.title,
+        message: notificationData.message,
+        type: notificationData.type,
+        isRead: false,
+        createdAt: serverTimestamp()
+      });
+
+      // إغلاق النافذة
+      setIsSendNotificationModalOpen(false);
+      setNotificationData({
+        title: '',
+        message: '',
+        type: 'info'
+      });
+      setSelectedUser(null);
+    } catch (error) {
+      console.error('Error sending notification:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // تطبيق الفلاتر المتقدمة
+  const applyAdvancedFilters = () => {
+    let filtered = [...users];
+
+    // فلترة حسب مستوى العضوية
+    if (membershipFilter !== '') {
+      filtered = filtered.filter(user => user.membershipLevel === membershipFilter);
+    }
+
+    // فلترة حسب الحالة
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'active') {
+        filtered = filtered.filter(user => !user.isBlocked && !user.isAdmin);
+      } else if (statusFilter === 'blocked') {
+        filtered = filtered.filter(user => user.isBlocked);
+      } else if (statusFilter === 'admin') {
+        filtered = filtered.filter(user => user.isAdmin);
+      }
+    }
+
+    // فلترة حسب الرصيد
+    if (balanceFilter.min) {
+      const minBalance = parseFloat(balanceFilter.min);
+      filtered = filtered.filter(user => user.balances.USDT >= minBalance);
+    }
+
+    if (balanceFilter.max) {
+      const maxBalance = parseFloat(balanceFilter.max);
+      filtered = filtered.filter(user => user.balances.USDT <= maxBalance);
+    }
+
+    // فلترة حسب تاريخ التسجيل
+    if (dateFilter.start) {
+      const startDate = new Date(dateFilter.start);
+      filtered = filtered.filter(user => {
+        const userDate = user.createdAt?.toDate ? user.createdAt.toDate() : new Date(user.createdAt);
+        return userDate >= startDate;
+      });
+    }
+
+    if (dateFilter.end) {
+      const endDate = new Date(dateFilter.end);
+      endDate.setHours(23, 59, 59, 999); // نهاية اليوم
+      filtered = filtered.filter(user => {
+        const userDate = user.createdAt?.toDate ? user.createdAt.toDate() : new Date(user.createdAt);
+        return userDate <= endDate;
+      });
+    }
+
+    // تطبيق البحث النصي إذا كان موجودًا
+    if (searchTerm.trim() !== '') {
+      filtered = filtered.filter(
+        (user) =>
+          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.referralCode.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    setFilteredUsers(filtered);
+  };
+
+  // إعادة تعيين الفلاتر المتقدمة
+  const resetAdvancedFilters = () => {
+    setMembershipFilter('');
+    setStatusFilter('all');
+    setBalanceFilter({ min: '', max: '' });
+    setDateFilter({ start: '', end: '' });
+    setSearchTerm('');
+    setFilteredUsers(users);
   };
 
   useEffect(() => {
@@ -456,6 +701,59 @@ export default function AdminUsers() {
         <h1 className="text-2xl font-bold">إدارة المستخدمين</h1>
         <p className="text-foreground-muted">عرض وإدارة جميع المستخدمين المسجلين في المنصة.</p>
       </div>
+
+      {/* قسم الإحصائيات */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="bg-background-light p-4 rounded-xl shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-foreground-muted text-sm">إجمالي المستخدمين</p>
+              <p className="text-2xl font-bold">{stats.totalUsers}</p>
+            </div>
+            <div className="bg-primary/10 p-3 rounded-full">
+              <FaUsers className="text-primary text-xl" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-background-light p-4 rounded-xl shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-foreground-muted text-sm">إجمالي الرصيد</p>
+              <p className="text-2xl font-bold">{stats.totalBalance.toFixed(2)} USDT</p>
+            </div>
+            <div className="bg-success/10 p-3 rounded-full">
+              <FaWallet className="text-success text-xl" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-background-light p-4 rounded-xl shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-foreground-muted text-sm">إجمالي الإيداعات</p>
+              <p className="text-2xl font-bold">{stats.totalDeposited.toFixed(2)} USDT</p>
+            </div>
+            <div className="bg-info/10 p-3 rounded-full">
+              <FaExchangeAlt className="text-info text-xl" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-background-light p-4 rounded-xl shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-foreground-muted text-sm">إجمالي السحوبات</p>
+              <p className="text-2xl font-bold">{stats.totalWithdrawn.toFixed(2)} USDT</p>
+            </div>
+            <div className="bg-warning/10 p-3 rounded-full">
+              <FaExchangeAlt className="text-warning text-xl" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* قسم البحث والفلترة */}
       <div className="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="relative w-full md:w-auto">
           <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -470,14 +768,126 @@ export default function AdminUsers() {
           />
         </div>
 
-        <button
-          className="bg-primary text-white py-2 px-4 rounded-lg flex items-center w-full md:w-auto justify-center"
-          onClick={handleOpenAddUserModal}
-        >
-          <FaUserPlus className="ml-2" />
-          إضافة مستخدم جديد
-        </button>
+        <div className="flex gap-2 w-full md:w-auto">
+          <button
+            className="bg-info text-white py-2 px-4 rounded-lg flex items-center justify-center"
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+          >
+            <FaFilter className="ml-2" />
+            {showAdvancedFilters ? 'إخفاء الفلاتر المتقدمة' : 'الفلاتر المتقدمة'}
+          </button>
+
+          <button
+            className="bg-success text-white py-2 px-4 rounded-lg flex items-center justify-center"
+            onClick={exportUsersToCSV}
+            disabled={isExporting || filteredUsers.length === 0}
+          >
+            {isExporting ? <FaSpinner className="animate-spin ml-2" /> : <FaDownload className="ml-2" />}
+            تصدير البيانات
+          </button>
+
+          <button
+            className="bg-primary text-white py-2 px-4 rounded-lg flex items-center justify-center"
+            onClick={handleOpenAddUserModal}
+          >
+            <FaUserPlus className="ml-2" />
+            إضافة مستخدم
+          </button>
+        </div>
       </div>
+
+      {/* الفلاتر المتقدمة */}
+      {showAdvancedFilters && (
+        <div className="bg-background-light p-4 rounded-xl shadow-sm mb-6">
+          <h3 className="font-medium mb-4">الفلاتر المتقدمة</h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div>
+              <label className="block mb-2 text-sm font-medium">مستوى العضوية</label>
+              <select
+                className="bg-background-lighter border border-background-lighter text-foreground rounded-lg block w-full p-2.5"
+                value={membershipFilter}
+                onChange={(e) => setMembershipFilter(e.target.value === '' ? '' : parseInt(e.target.value))}
+              >
+                <option value="">الكل</option>
+                <option value="0">Iseix Basic</option>
+                <option value="1">Iseix Silver</option>
+                <option value="2">Iseix Gold</option>
+                <option value="3">Iseix Platinum</option>
+                <option value="4">Iseix Diamond</option>
+                <option value="5">Iseix Elite</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block mb-2 text-sm font-medium">الحالة</label>
+              <select
+                className="bg-background-lighter border border-background-lighter text-foreground rounded-lg block w-full p-2.5"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
+              >
+                <option value="all">الكل</option>
+                <option value="active">نشط</option>
+                <option value="blocked">محظور</option>
+                <option value="admin">مشرف</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block mb-2 text-sm font-medium">نطاق الرصيد</label>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="number"
+                  className="bg-background-lighter border border-background-lighter text-foreground rounded-lg block w-full p-2.5"
+                  placeholder="الحد الأدنى"
+                  value={balanceFilter.min}
+                  onChange={(e) => setBalanceFilter({ ...balanceFilter, min: e.target.value })}
+                />
+                <input
+                  type="number"
+                  className="bg-background-lighter border border-background-lighter text-foreground rounded-lg block w-full p-2.5"
+                  placeholder="الحد الأقصى"
+                  value={balanceFilter.max}
+                  onChange={(e) => setBalanceFilter({ ...balanceFilter, max: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block mb-2 text-sm font-medium">تاريخ التسجيل</label>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="date"
+                  className="bg-background-lighter border border-background-lighter text-foreground rounded-lg block w-full p-2.5"
+                  value={dateFilter.start}
+                  onChange={(e) => setDateFilter({ ...dateFilter, start: e.target.value })}
+                />
+                <input
+                  type="date"
+                  className="bg-background-lighter border border-background-lighter text-foreground rounded-lg block w-full p-2.5"
+                  value={dateFilter.end}
+                  onChange={(e) => setDateFilter({ ...dateFilter, end: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              className="px-4 py-2 bg-background-dark text-white rounded-lg hover:bg-background-darker transition-colors ml-2"
+              onClick={resetAdvancedFilters}
+            >
+              إعادة تعيين
+            </button>
+            <button
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+              onClick={applyAdvancedFilters}
+            >
+              تطبيق الفلاتر
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="bg-background-light rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -549,10 +959,13 @@ export default function AdminUsers() {
                       <div className="flex items-center justify-center space-x-2 space-x-reverse">
                         <button
                           className="p-1 text-primary hover:bg-primary/10 rounded"
-                          onClick={() => handleEditUser(user)}
-                          title="تعديل"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setIsUserDetailsModalOpen(true);
+                          }}
+                          title="عرض التفاصيل"
                         >
-                          <FaEdit />
+                          <FaUser />
                         </button>
                         <button
                           className="p-1 text-success hover:bg-success/10 rounded"
@@ -567,6 +980,16 @@ export default function AdminUsers() {
                           title="ترقية العضوية"
                         >
                           <FaCrown />
+                        </button>
+                        <button
+                          className="p-1 text-warning hover:bg-warning/10 rounded"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setIsSendNotificationModalOpen(true);
+                          }}
+                          title="إرسال إشعار"
+                        >
+                          <FaBell />
                         </button>
                         <button
                           className={`p-1 ${
@@ -930,6 +1353,246 @@ export default function AdminUsers() {
                 إلغاء
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* نافذة إرسال إشعار */}
+      <div className={`modal ${isSendNotificationModalOpen ? 'modal-open' : ''}`}>
+        <div className="modal-box">
+          <h3 className="font-bold text-lg mb-4">إرسال إشعار</h3>
+
+          {selectedUser && (
+            <div>
+              <p className="mb-4">
+                إرسال إشعار للمستخدم: <span className="font-bold">{selectedUser.displayName}</span>
+              </p>
+
+              <div className="mb-4">
+                <label className="block mb-2 font-medium">نوع الإشعار</label>
+                <select
+                  className="bg-background-light border border-background-lighter text-foreground rounded-lg block w-full p-3"
+                  value={notificationData.type}
+                  onChange={(e) => setNotificationData({ ...notificationData, type: e.target.value })}
+                >
+                  <option value="info">معلومات</option>
+                  <option value="success">نجاح</option>
+                  <option value="warning">تحذير</option>
+                  <option value="error">خطأ</option>
+                </select>
+              </div>
+
+              <div className="mb-4">
+                <label className="block mb-2 font-medium">عنوان الإشعار</label>
+                <input
+                  type="text"
+                  className="bg-background-light border border-background-lighter text-foreground rounded-lg block w-full p-3"
+                  placeholder="أدخل عنوان الإشعار"
+                  value={notificationData.title}
+                  onChange={(e) => setNotificationData({ ...notificationData, title: e.target.value })}
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block mb-2 font-medium">نص الإشعار</label>
+                <textarea
+                  className="bg-background-light border border-background-lighter text-foreground rounded-lg block w-full p-3"
+                  placeholder="أدخل نص الإشعار"
+                  rows={4}
+                  value={notificationData.message}
+                  onChange={(e) => setNotificationData({ ...notificationData, message: e.target.value })}
+                ></textarea>
+              </div>
+
+              <div className="modal-action">
+                <button
+                  className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+                  onClick={sendNotification}
+                  disabled={isProcessing || !notificationData.title || !notificationData.message}
+                >
+                  {isProcessing ? (
+                    <span className="flex items-center">
+                      <FaSpinner className="animate-spin ml-2" />
+                      جاري الإرسال...
+                    </span>
+                  ) : (
+                    <span className="flex items-center">
+                      <FaBell className="ml-2" />
+                      إرسال الإشعار
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  className="px-4 py-2 bg-background-lighter text-foreground rounded-lg hover:bg-background-light transition-colors"
+                  onClick={() => setIsSendNotificationModalOpen(false)}
+                  disabled={isProcessing}
+                >
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* نافذة تفاصيل المستخدم */}
+      <div className={`modal ${isUserDetailsModalOpen ? 'modal-open' : ''}`}>
+        <div className="modal-box max-w-3xl">
+          <h3 className="font-bold text-lg mb-4">تفاصيل المستخدم</h3>
+
+          {selectedUser && (
+            <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                {/* معلومات المستخدم الأساسية */}
+                <div className="bg-background-lighter p-4 rounded-lg">
+                  <h4 className="font-bold mb-3 text-primary">المعلومات الأساسية</h4>
+
+                  <div className="flex items-center mb-4">
+                    <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center ml-4">
+                      <FaUser className="text-primary text-2xl" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-lg">{selectedUser.displayName}</p>
+                      <p className="text-foreground-muted">{selectedUser.email}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-foreground-muted text-sm">معرف المستخدم</p>
+                      <p className="font-mono text-xs break-all">{selectedUser.id}</p>
+                    </div>
+                    <div>
+                      <p className="text-foreground-muted text-sm">رمز الإحالة</p>
+                      <p className="font-mono">{selectedUser.referralCode}</p>
+                    </div>
+                    <div>
+                      <p className="text-foreground-muted text-sm">مستوى العضوية</p>
+                      <p>
+                        <span className="px-2 py-1 rounded-full text-xs bg-primary/10 text-primary">
+                          {getMembershipLevelName(selectedUser.membershipLevel)}
+                        </span>
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-foreground-muted text-sm">الحالة</p>
+                      <p>
+                        {selectedUser.isAdmin ? (
+                          <span className="px-2 py-1 rounded-full text-xs bg-primary/20 text-primary">
+                            مشرف
+                          </span>
+                        ) : selectedUser.isBlocked ? (
+                          <span className="px-2 py-1 rounded-full text-xs bg-error/20 text-error">
+                            محظور
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 rounded-full text-xs bg-success/20 text-success">
+                            نشط
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-foreground-muted text-sm">تاريخ التسجيل</p>
+                      <p>{formatDate(selectedUser.createdAt)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* معلومات مالية */}
+                <div className="bg-background-lighter p-4 rounded-lg">
+                  <h4 className="font-bold mb-3 text-primary">المعلومات المالية</h4>
+
+                  <div className="grid grid-cols-1 gap-4 mb-4">
+                    <div className="bg-background-light p-3 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-foreground-muted text-sm">الرصيد الحالي</p>
+                          <p className="text-xl font-bold">{selectedUser.balances.USDT.toFixed(2)} USDT</p>
+                        </div>
+                        <div className="bg-success/10 p-2 rounded-full">
+                          <FaWallet className="text-success" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-background-light p-3 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-foreground-muted text-sm">إجمالي الإيداعات</p>
+                            <p className="font-bold">{selectedUser.totalDeposited.toFixed(2)} USDT</p>
+                          </div>
+                          <div className="bg-info/10 p-2 rounded-full">
+                            <FaExchangeAlt className="text-info" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-background-light p-3 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-foreground-muted text-sm">إجمالي السحوبات</p>
+                            <p className="font-bold">{selectedUser.totalWithdrawn.toFixed(2)} USDT</p>
+                          </div>
+                          <div className="bg-warning/10 p-2 rounded-full">
+                            <FaExchangeAlt className="text-warning" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-background-light">
+                    <h5 className="font-medium mb-2">الإجراءات السريعة</h5>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        className="px-3 py-1.5 bg-success text-white rounded-lg text-xs flex items-center"
+                        onClick={() => {
+                          setIsUserDetailsModalOpen(false);
+                          handleAddBalance(selectedUser);
+                        }}
+                      >
+                        <FaMoneyBillWave className="ml-1" />
+                        إضافة رصيد
+                      </button>
+
+                      <button
+                        className="px-3 py-1.5 bg-primary text-white rounded-lg text-xs flex items-center"
+                        onClick={() => {
+                          setIsUserDetailsModalOpen(false);
+                          handleUpgradeMembership(selectedUser);
+                        }}
+                      >
+                        <FaCrown className="ml-1" />
+                        ترقية العضوية
+                      </button>
+
+                      <button
+                        className="px-3 py-1.5 bg-warning text-white rounded-lg text-xs flex items-center"
+                        onClick={() => {
+                          setIsUserDetailsModalOpen(false);
+                          setIsSendNotificationModalOpen(true);
+                        }}
+                      >
+                        <FaBell className="ml-1" />
+                        إرسال إشعار
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="modal-action">
+            <button
+              className="px-4 py-2 bg-background-dark text-white rounded-lg hover:bg-background-darker transition-colors"
+              onClick={() => setIsUserDetailsModalOpen(false)}
+            >
+              إغلاق
+            </button>
           </div>
         </div>
       </div>

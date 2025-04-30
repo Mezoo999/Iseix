@@ -2,35 +2,9 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '@/firebase/config';
+import { auth } from '@/firebase/config';
 import { logoutUser } from '@/firebase/auth';
-
-// تعريف نوع بيانات المستخدم
-export interface UserData {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-  photoURL?: string | null;
-  phoneNumber?: string | null;
-  isAdmin: boolean;
-  isOwner?: boolean; // علامة خاصة لمالك المنصة
-  balances?: {
-    [currency: string]: number;
-  };
-  totalInvested: number;
-  totalProfit: number;
-  totalDeposited?: number;
-  totalWithdrawn?: number;
-  totalReferrals?: number;
-  totalReferralEarnings?: number;
-  referralCode: string;
-  referredBy: string | null;
-  emailVerified: boolean;
-  membershipLevel?: string; // مستوى العضوية
-  createdAt: any;
-  updatedAt?: any;
-}
+import { getUserData, createOrUpdateUserData, generateReferralCode, UserData } from '@/services/users';
 
 // تعريف نوع سياق المصادقة
 interface AuthContextType {
@@ -54,18 +28,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // دالة إنشاء رمز إحالة فريد
-  const generateReferralCode = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let code = '';
-    for (let i = 0; i < 8; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return code;
-  };
-
   // دالة إنشاء بيانات مستخدم افتراضية
-  const createDefaultUserData = (user: User): UserData => {
+  const createDefaultUserData = (user: User): Partial<UserData> => {
     return {
       uid: user.uid,
       email: user.email,
@@ -85,11 +49,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       totalWithdrawn: 0,
       totalReferrals: 0,
       totalReferralEarnings: 0,
-      referralCode: generateReferralCode(),
+      referralCode: generateReferralCode(user.uid),
       referredBy: null,
       emailVerified: user.emailVerified || true,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+      membershipLevel: 0
     };
   };
 
@@ -104,12 +67,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
           console.log('Fetching user data from Firestore for user:', user.uid);
           // جلب بيانات المستخدم من Firestore
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          const userDataResult = await getUserData(user.uid);
 
-          if (userDoc.exists()) {
+          if (userDataResult) {
             console.log('User document exists in Firestore');
-            const firestoreData = userDoc.data() as UserData;
-            setUserData(firestoreData);
+            setUserData(userDataResult);
             console.log('User data set from Firestore');
           } else {
             console.log('User document does not exist in Firestore, creating it...');
@@ -119,13 +81,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             // إنشاء وثيقة المستخدم في Firestore
             try {
-              await setDoc(doc(db, 'users', user.uid), defaultUserData);
+              await createOrUpdateUserData(user.uid, defaultUserData);
               console.log('User document created successfully');
-              setUserData(defaultUserData);
+
+              // جلب البيانات المحدثة بعد الإنشاء
+              const updatedUserData = await getUserData(user.uid);
+              setUserData(updatedUserData);
             } catch (createError) {
               console.error('Error creating user document:', createError);
               // استخدام البيانات الافتراضية على أي حال
-              setUserData(defaultUserData);
+              setUserData(defaultUserData as UserData);
             }
           }
         } catch (error) {
@@ -143,16 +108,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               console.error('Error parsing cached user data:', parseError);
               // إنشاء بيانات مستخدم افتراضية
               const defaultUserData = createDefaultUserData(user);
-              setUserData(defaultUserData);
+              setUserData(defaultUserData as UserData);
             }
           } else {
             console.log('No cached data, creating default user data');
             // إنشاء بيانات مستخدم افتراضية
-            const defaultUserData = {
-              ...createDefaultUserData(user),
-              createdAt: new Date(),
-              updatedAt: new Date()
-            };
+            const defaultUserData = createDefaultUserData(user) as UserData;
             setUserData(defaultUserData);
           }
         }

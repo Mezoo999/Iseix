@@ -82,16 +82,16 @@ function StatItem({ icon, value, label, delay, endValue, suffix = '' }: StatItem
     <FadeInView direction="up" delay={delay} className="relative">
       <div
         id={`stat-${label}`}
-        className="card card-primary p-6 text-center h-full"
+        className="card card-primary p-3 sm:p-6 text-center h-full"
       >
-        <div className="p-4 rounded-full bg-primary/20 text-primary inline-block mb-4">
+        <div className="p-3 sm:p-4 rounded-full bg-primary/20 text-primary inline-block mb-2 sm:mb-4">
           {icon}
         </div>
-        <div className="text-4xl md:text-5xl font-bold text-gradient mb-2">
+        <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gradient mb-1 sm:mb-2">
           {count}
           {suffix}
         </div>
-        <div className="text-foreground-muted">{label}</div>
+        <div className="text-foreground-muted text-sm sm:text-base">{label}</div>
       </div>
     </FadeInView>
   );
@@ -100,7 +100,7 @@ function StatItem({ icon, value, label, delay, endValue, suffix = '' }: StatItem
 export default function StatsSection() {
   const stats = [
     {
-      icon: <FaUsers className="text-2xl" />,
+      icon: <FaUsers className="text-xl sm:text-2xl" />,
       value: '15K+',
       endValue: 15000,
       suffix: '+',
@@ -108,7 +108,7 @@ export default function StatsSection() {
       delay: 0.1
     },
     {
-      icon: <FaMoneyBillWave className="text-2xl" />,
+      icon: <FaMoneyBillWave className="text-xl sm:text-2xl" />,
       value: '$10M+',
       endValue: 10,
       suffix: 'M+',
@@ -116,7 +116,7 @@ export default function StatsSection() {
       delay: 0.2
     },
     {
-      icon: <FaGlobe className="text-2xl" />,
+      icon: <FaGlobe className="text-xl sm:text-2xl" />,
       value: '25+',
       endValue: 25,
       suffix: '+',
@@ -124,7 +124,7 @@ export default function StatsSection() {
       delay: 0.3
     },
     {
-      icon: <FaServer className="text-2xl" />,
+      icon: <FaServer className="text-xl sm:text-2xl" />,
       value: '99.9%',
       endValue: 99.9,
       suffix: '%',
@@ -134,18 +134,18 @@ export default function StatsSection() {
   ];
 
   return (
-    <section className="py-16">
+    <section className="py-10 sm:py-16">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 sm:mb-12">
           <FadeInView direction="up">
-            <h2 className="text-3xl font-bold mb-4">إحصائيات المنصة</h2>
-            <p className="text-foreground-muted max-w-2xl mx-auto">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">إحصائيات المنصة</h2>
+            <p className="text-sm sm:text-base text-foreground-muted max-w-2xl mx-auto">
               تعرف على أرقامنا وإنجازاتنا التي تعكس نجاح منصتنا وثقة المستخدمين
             </p>
           </FadeInView>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {stats.map((stat, index) => (
             <StatItem
               key={index}

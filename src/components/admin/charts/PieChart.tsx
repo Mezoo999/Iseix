@@ -25,7 +25,7 @@ export default function PieChart({
   data,
   height = 250,
   width = 250,
-  colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'],
+  colors = ['#3b82f6', '#2563EB', '#1D4ED8', '#1E40AF', '#1E3A8A', '#172554'],
   showLabels = true,
   showLegend = true,
   showPercentage = true,

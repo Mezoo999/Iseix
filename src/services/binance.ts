@@ -1,6 +1,9 @@
 import axios from 'axios';
-import { doc, updateDoc, addDoc, collection, serverTimestamp, increment } from 'firebase/firestore';
+import { doc, updateDoc, addDoc, collection, serverTimestamp, increment, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase/config';
+import { validateWithdrawalAmount, getAvailableProfitsForWithdrawal, hasPendingWithdrawals } from './profitManagement';
+import { createWithdrawalRequest as createWithdrawalRequestFromService } from './withdrawals';
+import { hasEnoughBalance } from './users';
 
 // تكوين Binance API
 const BINANCE_API_URL = 'https://api.binance.com';
@@ -94,89 +97,58 @@ export const generateDepositAddress = async (
 };
 
 // إنشاء طلب سحب
+
 export const createWithdrawalRequest = async (
   userId: string,
+  amount: number,
   coin: string,
   network: string,
-  amount: number,
   address: string,
   addressTag?: string
 ): Promise<string> => {
   try {
-    // إنشاء طلب سحب في Firestore
-    const withdrawalRef = await addDoc(collection(db, 'withdrawals'), {
-      userId,
-      coin,
-      network,
-      amount,
-      address,
-      addressTag: addressTag || null,
-      status: 'pending',
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      txId: null,
-    });
+    console.log(`[binance.ts] إنشاء طلب سحب جديد: userId=${userId}, amount=${amount}, coin=${coin}, network=${network}, address=${address}`);
 
-    // في بيئة الإنتاج، سنستخدم Binance API لإنشاء طلب سحب
-    // في بيئة التطوير، سنحاكي العملية
+    // التحقق من صحة المعلمات
+    if (!userId) throw new Error('معرف المستخدم مطلوب');
+    if (!amount || amount <= 0) throw new Error('المبلغ يجب أن يكون أكبر من صفر');
+    if (!coin) throw new Error('العملة مطلوبة');
+    if (!network) throw new Error('الشبكة مطلوبة');
+    if (!address) throw new Error('عنوان المحفظة مطلوب');
 
-    if (process.env.NODE_ENV === 'production') {
-      // استدعاء Binance API (يتطلب مفاتيح API)
-      // هذا مثال فقط، يجب استبداله بالتنفيذ الفعلي
-      /*
-      const response = await axios.post(
-        `${API_URL}/sapi/v1/capital/withdraw/apply`,
-        null,
-        {
-          params: {
-            coin,
-            network,
-            address,
-            addressTag,
-            amount,
-            timestamp: Date.now(),
-            // يجب إضافة التوقيع هنا
-          },
-          headers: {
-            'X-MBX-APIKEY': process.env.BINANCE_API_KEY,
-          },
-        }
-      );
-
-      // تحديث طلب السحب بمعرف المعاملة
-      await updateDoc(doc(db, 'withdrawals', withdrawalRef.id), {
-        txId: response.data.id,
-        status: 'processing',
-        updatedAt: serverTimestamp(),
-      });
-      */
-
-      // محاكاة طلب السحب
-      await updateDoc(doc(db, 'withdrawals', withdrawalRef.id), {
-        txId: `tx_${Math.random().toString(36).substring(2, 15)}`,
-        status: 'processing',
-        updatedAt: serverTimestamp(),
-      });
-    } else {
-      // محاكاة طلب السحب في بيئة التطوير
-      await updateDoc(doc(db, 'withdrawals', withdrawalRef.id), {
-        txId: `test_tx_${Math.random().toString(36).substring(2, 15)}`,
-        status: 'processing',
-        updatedAt: serverTimestamp(),
-      });
+    // التحقق من الحد الأدنى للسحب
+    if (amount < 20) {
+      throw new Error(`الحد الأدنى للسحب هو 20 ${coin}`);
     }
 
-    // تحديث رصيد المستخدم
-    const userRef = doc(db, 'users', userId);
-    await updateDoc(userRef, {
-      [`balances.${coin}`]: increment(-amount),
-      totalWithdrawn: increment(amount),
-      updatedAt: serverTimestamp(),
-    });
+    // التحقق من وجود طلبات سحب معلقة
+    const hasPending = await hasPendingWithdrawals(userId);
+    if (hasPending) {
+      console.log(`[binance.ts] المستخدم ${userId} لديه طلب سحب معلق بالفعل`);
+      throw new Error(`لديك طلب سحب معلق بالفعل. يرجى الانتظار حتى تتم معالجته قبل إنشاء طلب جديد.`);
+    }
 
-    return withdrawalRef.id;
+    // التحقق من المكافآت المتاحة للسحب
+    const availableProfits = await getAvailableProfitsForWithdrawal(userId, coin);
+    console.log(`[binance.ts] المكافآت المتاحة للسحب للمستخدم ${userId}: ${availableProfits} ${coin}`);
+
+    if (amount > availableProfits) {
+      console.log(`[binance.ts] المبلغ المطلوب (${amount}) أكبر من المكافآت المتاحة (${availableProfits})`);
+      throw new Error(`يمكنك فقط سحب المكافآت. المكافآت المتاحة للسحب: ${availableProfits.toFixed(2)} ${coin}`);
+    }
+
+    // استدعاء خدمة السحب الرئيسية من withdrawals.ts
+    console.log(`[binance.ts] استدعاء خدمة السحب الرئيسية`);
+    return await createWithdrawalRequestFromService(
+      userId,
+      amount,
+      coin,
+      network,
+      address,
+      addressTag
+    );
   } catch (error) {
-    console.error('Error creating withdrawal request:', error);
+    console.error('[binance.ts] Error creating withdrawal request:', error);
     throw error;
   }
 };

@@ -3,16 +3,18 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { FaUsers, FaCopy, FaCheckCircle, FaUserPlus, FaInfoCircle, FaNetworkWired } from 'react-icons/fa';
+import { FaUsers, FaCopy, FaCheckCircle, FaUserPlus, FaInfoCircle, FaNetworkWired, FaChartNetwork, FaShareAlt, FaLink } from 'react-icons/fa';
 
 import PageTemplate from '@/components/layout/PageTemplate';
 import ReferralStatsCard from '@/components/referral/ReferralStatsCard';
+import ReferralNetworkGraph from '@/components/referral/ReferralNetworkGraph';
 import { PageLoader, CircleLoader } from '@/components/ui/Loaders';
 import { useAuth } from '@/contexts/AuthContext';
 import { AlertProvider, useAlert } from '@/contexts/AlertContext';
 import { getUserReferralCode, getUserReferrals, getUserReferralStats, Referral, ReferralStats } from '@/services/referral';
 import { FadeInView } from '@/components/ui/AnimatedElements';
 import Card from '@/components/ui/Card';
+import ActionButton from '@/components/ui/ActionButton';
 
 export default function ReferralsPage() {
   return (
@@ -249,37 +251,107 @@ function ReferralsContent() {
         </div>
       </div>
 
-      {/* إضافة قسم جديد لرابط الإحالة */}
+      {/* قسم رابط الإحالة */}
       <Card
         className="mb-8"
         title="رابط الإحالة الخاص بك"
-        icon={<FaCopy className="text-primary" />}
+        icon={<FaLink className="text-primary" />}
         delay={0.4}
       >
-        <div className="bg-background-light/30 p-4 rounded-lg flex flex-col sm:flex-row items-center justify-between">
-          <div className="mb-4 sm:mb-0 w-full sm:w-auto">
-            <p className="text-sm text-foreground-muted mb-1">رابط الإحالة:</p>
-            <div className="bg-background-light p-3 rounded-lg border border-background-lighter text-sm font-mono overflow-x-auto">
-              {referralLink}
+        <div className="bg-gradient-to-br from-background-dark/50 to-background-dark/30 p-5 rounded-xl border border-primary/10 shadow-inner">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="w-full">
+              <p className="text-sm text-foreground-muted mb-2 flex items-center">
+                <FaShareAlt className="ml-2 text-primary" />
+                شارك هذا الرابط مع أصدقائك للحصول على عمولات
+              </p>
+              <div className="bg-background-dark/50 p-4 rounded-lg border border-primary/20 text-sm font-mono overflow-x-auto flex items-center">
+                <span className="truncate">{referralLink}</span>
+              </div>
+            </div>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <ActionButton
+                variant="primary"
+                size="lg"
+                icon={isCopied ? <FaCheckCircle /> : <FaCopy />}
+                onClick={copyReferralLink}
+                className="whitespace-nowrap"
+              >
+                {isCopied ? 'تم النسخ' : 'نسخ الرابط'}
+              </ActionButton>
+            </motion.div>
+          </div>
+        </div>
+      </Card>
+
+      {/* قسم شبكة الإحالات */}
+      <Card
+        className="mb-8"
+        title="شبكة الإحالات الخاصة بك"
+        icon={<FaChartNetwork className="text-primary" />}
+        delay={0.5}
+      >
+        {referrals.length === 0 ? (
+          <div className="text-center py-8 bg-gradient-to-br from-background-dark/50 to-background-dark/30 rounded-xl border border-primary/10 shadow-inner">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <FaNetworkWired className="text-primary text-5xl mx-auto mb-4 opacity-50" />
+              <p className="text-foreground-muted mb-3">لم تقم بدعوة أي شخص بعد</p>
+              <p className="text-sm text-foreground-muted mb-5 max-w-md mx-auto">
+                شارك رمز الإحالة الخاص بك مع أصدقائك وعائلتك لبناء شبكة الإحالات الخاصة بك والحصول على عمولات
+              </p>
+              <ActionButton
+                variant="primary"
+                icon={<FaShareAlt />}
+                onClick={copyReferralLink}
+              >
+                مشاركة رابط الإحالة
+              </ActionButton>
+            </motion.div>
+          </div>
+        ) : (
+          <div className="bg-gradient-to-br from-background-dark/50 to-background-dark/30 p-5 rounded-xl border border-primary/10 shadow-inner">
+            <ReferralNetworkGraph
+              data={{
+                id: currentUser.uid,
+                name: userData.displayName || currentUser.email?.split('@')[0] || 'أنت',
+                email: currentUser.email || '',
+                level: 0,
+                status: 'active',
+                children: referrals
+                  .filter(r => r.level === 1)
+                  .map(ref => ({
+                    id: ref.referredUid,
+                    name: ref.referredName || ref.referredEmail.split('@')[0],
+                    email: ref.referredEmail,
+                    level: 1,
+                    status: ref.status as 'active' | 'pending' | 'inactive',
+                    children: referrals
+                      .filter(r => r.level === 2 && r.parentReferrerId === ref.referredUid)
+                      .map(childRef => ({
+                        id: childRef.referredUid,
+                        name: childRef.referredName || childRef.referredEmail.split('@')[0],
+                        email: childRef.referredEmail,
+                        level: 2,
+                        status: childRef.status as 'active' | 'pending' | 'inactive'
+                      }))
+                  }))
+              }}
+              maxLevels={2}
+            />
+            <div className="text-center mt-4">
+              <p className="text-sm text-foreground-muted">
+                يمكنك الحصول على عمولات من الإحالات حتى المستوى الثالث
+              </p>
             </div>
           </div>
-          <button
-            className="btn btn-primary w-full sm:w-auto"
-            onClick={copyReferralLink}
-          >
-            {isCopied ? (
-              <span className="flex items-center">
-                <FaCheckCircle className="ml-2" />
-                تم نسخ الرابط
-              </span>
-            ) : (
-              <span className="flex items-center">
-                <FaCopy className="ml-2" />
-                نسخ رابط الإحالة
-              </span>
-            )}
-          </button>
-        </div>
+        )}
       </Card>
     </PageTemplate>
   );

@@ -110,7 +110,7 @@ export default function LineChart({
                   y1={y}
                   x2={padding + chartWidth}
                   y2={y}
-                  stroke="rgba(255,255,255,0.1)"
+                  stroke="rgba(59, 130, 246, 0.15)"
                   strokeDasharray="4 4"
                 />
               );
@@ -123,7 +123,7 @@ export default function LineChart({
                 y1={padding}
                 x2={p.x}
                 y2={padding + chartHeight}
-                stroke="rgba(255,255,255,0.1)"
+                stroke="rgba(59, 130, 246, 0.15)"
                 strokeDasharray="4 4"
               />
             ))}

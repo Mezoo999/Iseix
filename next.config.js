@@ -18,6 +18,14 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // تكوين الصفحات الثابتة
+  output: 'export',
+  // تكوين المسارات الديناميكية
+  trailingSlash: true,
+  // تكوين الصور
+  images: {
+    unoptimized: true,
+  },
 };
 
 module.exports = nextConfig;
