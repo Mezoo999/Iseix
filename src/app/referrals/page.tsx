@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { FaUsers, FaCopy, FaCheckCircle, FaUserPlus, FaInfoCircle, FaNetworkWired, FaChartNetwork, FaShareAlt, FaLink } from 'react-icons/fa';
+import { FaUsers, FaCopy, FaCheckCircle, FaUserPlus, FaInfoCircle, FaNetworkWired, FaShareAlt, FaLink } from 'react-icons/fa';
 
 import PageTemplate from '@/components/layout/PageTemplate';
 import ReferralStatsCard from '@/components/referral/ReferralStatsCard';
@@ -291,7 +291,7 @@ function ReferralsContent() {
       <Card
         className="mb-8"
         title="شبكة الإحالات الخاصة بك"
-        icon={<FaChartNetwork className="text-primary" />}
+        icon={<FaNetworkWired className="text-primary" />}
         delay={0.5}
       >
         {referrals.length === 0 ? (

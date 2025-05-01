@@ -4,32 +4,19 @@
 
 ## البدء
 
-First, run the development server:
+قم بتشغيل خادم التطوير:
 
 ```bash
 npm run dev
-# or
+# أو
 yarn dev
-# or
+# أو
 pnpm dev
-# or
+# أو
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+افتح [http://localhost:3000](http://localhost:3000) في متصفحك لرؤية النتيجة.
 
 ## فهارس Firebase المطلوبة
 
@@ -42,8 +29,84 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 3. انقر على زر "إنشاء الفهرس" (Create Index).
 4. انتظر حتى يتم إنشاء الفهرس (قد يستغرق هذا بضع دقائق).
 
-## النشر على Vercel
+## النشر
 
-أسهل طريقة لنشر تطبيق Next.js الخاص بك هي استخدام [منصة Vercel](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) من مبتكري Next.js.
+### النشر على Vercel (موصى به)
 
-راجع [وثائق نشر Next.js](https://nextjs.org/docs/app/building-your-application/deploying) لمزيد من التفاصيل.
+1. قم بإنشاء حساب على [Vercel](https://vercel.com) إذا لم يكن لديك حساب بالفعل.
+2. قم بتثبيت CLI الخاص بـ Vercel:
+   ```bash
+   npm install -g vercel
+   ```
+3. قم بتسجيل الدخول إلى حسابك:
+   ```bash
+   vercel login
+   ```
+4. قم بنشر المشروع:
+   ```bash
+   npm run deploy:vercel
+   ```
+   أو
+   ```bash
+   vercel
+   ```
+
+### النشر على Firebase
+
+1. قم بتثبيت Firebase CLI:
+   ```bash
+   npm install -g firebase-tools
+   ```
+2. قم بتسجيل الدخول إلى حسابك:
+   ```bash
+   firebase login
+   ```
+3. قم بتهيئة المشروع:
+   ```bash
+   firebase init
+   ```
+4. قم بنشر المشروع:
+   ```bash
+   npm run deploy:firebase
+   ```
+   أو
+   ```bash
+   firebase deploy
+   ```
+
+## ملاحظات هامة
+
+- تأكد من إنشاء جميع فهارس Firebase المطلوبة قبل النشر.
+- تأكد من تكوين متغيرات البيئة بشكل صحيح في ملف `.env.production`.
+- إذا واجهت أي مشاكل في النشر، تحقق من سجلات الخطأ وتأكد من أن جميع التبعيات مثبتة بشكل صحيح.
+
+## إعداد المهام المجدولة
+
+نظرًا لاستخدام الخطة المجانية من Firebase، يجب إعداد مهمة مجدولة خارجية لتحديث مستويات العضوية بشكل دوري. يمكن استخدام خدمة [cron-job.org](https://cron-job.org) لهذا الغرض.
+
+### خطوات إعداد مهمة مجدولة لتحديث مستويات العضوية:
+
+1. قم بإنشاء حساب على [cron-job.org](https://cron-job.org)
+2. انقر على "Create cronjob" أو "إنشاء مهمة جديدة"
+3. أدخل المعلومات التالية:
+   - **العنوان**: "تحديث مستويات العضوية Iseix"
+   - **عنوان URL**: `https://[رابط-موقعك]/api/update-membership?key=iseix_secure_api_key_2024`
+   - **طريقة الطلب**: POST
+   - **رأس HTTP**: `Content-Type: application/json`
+   - **محتوى الطلب**: `{}`
+
+4. إعداد الجدول الزمني:
+   - اضبط المهمة لتعمل مرة واحدة يوم<|im_start|>، على سبيل المثال في الساعة 00:00 (منتصف الليل)
+
+5. خيارات إضافية:
+   - قم بتفعيل "تنبيهات الفشل" لتلقي إشعار عند فشل المهمة
+   - اضبط "عدد محاولات إعادة المحاولة" إلى 3 في حالة فشل المهمة
+
+## الميزات الرئيسية
+
+- نظام مصادقة كامل (تسجيل الدخول، التسجيل، استعادة كلمة المرور)
+- نظام إحالة متعدد المستويات
+- نظام مهام يومية مع مكافآت
+- محفظة للإيداع والسحب
+- لوحة تحكم للمشرف
+- واجهة مستخدم متجاوبة مع الأجهزة المحمولة

@@ -19,7 +19,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   // تكوين الصفحات الثابتة
-  output: 'export',
+  output: 'export', // تم إعادة تفعيله لإنشاء موقع ثابت
   // تكوين المسارات الديناميكية
   trailingSlash: true,
   // تكوين الصور

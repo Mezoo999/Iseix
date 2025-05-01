@@ -7,11 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "clean": "rimraf .next",
+    "clean": "rimraf .next && rimraf out",
     "dev:clean": "rimraf .next && next dev",
-    "export": "next build && next export",
+    "export": "next build",
     "build:static": "next build",
-    "deploy": "next build && firebase deploy --only hosting"
+    "deploy:firebase": "next build && firebase deploy --only hosting",
+    "deploy:vercel": "vercel"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.2",

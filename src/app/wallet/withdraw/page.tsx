@@ -8,6 +8,7 @@ import { FaArrowLeft } from 'react-icons/fa';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import WithdrawForm from '@/components/wallet/WithdrawForm';
+import PendingWithdrawalInfo from '@/components/wallet/PendingWithdrawalInfo';
 import { PageLoader } from '@/components/ui/Loaders';
 import { useAuth } from '@/contexts/AuthContext';
 import { AlertProvider, useAlert } from '@/contexts/AlertContext';
@@ -36,6 +37,7 @@ function WithdrawContent() {
   // حالة تحميل المكافآت المتاحة
   const [availableProfits, setAvailableProfits] = useState(0);
   const [isLoadingProfits, setIsLoadingProfits] = useState(true);
+  const [hasPendingWithdrawal, setHasPendingWithdrawal] = useState(false);
 
   // جلب المكافآت المتاحة للسحب عند تحميل الصفحة
   useEffect(() => {
@@ -44,7 +46,7 @@ function WithdrawContent() {
     }
   }, [currentUser]);
 
-  // جلب المكافآت المتاحة للسحب
+  // جلب المكافآت المتاحة للسحب والتحقق من وجود طلبات سحب معلقة
   const loadAvailableProfits = async () => {
     if (!currentUser) return;
 
@@ -54,8 +56,14 @@ function WithdrawContent() {
       const profits = await getAvailableProfitsForWithdrawal(currentUser.uid, 'USDT');
       console.log('[withdraw/page.tsx] المكافآت المتاحة للسحب:', profits);
       setAvailableProfits(profits);
+
+      // التحقق من وجود طلبات سحب معلقة
+      console.log('[withdraw/page.tsx] التحقق من وجود طلبات سحب معلقة للمستخدم:', currentUser.uid);
+      const hasPending = await hasPendingWithdrawals(currentUser.uid);
+      console.log('[withdraw/page.tsx] نتيجة التحقق من وجود طلبات سحب معلقة:', hasPending);
+      setHasPendingWithdrawal(hasPending);
     } catch (err) {
-      console.error('[withdraw/page.tsx] Error loading available profits:', err);
+      console.error('[withdraw/page.tsx] Error loading withdrawal data:', err);
     } finally {
       setIsLoadingProfits(false);
     }
@@ -128,10 +136,31 @@ function WithdrawContent() {
 
       console.log(`[withdraw/page.tsx] تم إنشاء طلب السحب بنجاح. المعرف: ${withdrawalId}`);
 
+      // تحديث الرصيد المتاح في localStorage
+      try {
+        const userDataStr = localStorage.getItem('userData');
+        if (userDataStr) {
+          const userData = JSON.parse(userDataStr);
+          if (userData.balances && userData.balances.USDT !== undefined) {
+            // تحديث الرصيد
+            userData.balances.USDT = Math.max(0, userData.balances.USDT - amount);
+            // تحديث المكافآت المتاحة
+            if (userData.totalProfit !== undefined && userData.totalWithdrawn !== undefined) {
+              userData.totalWithdrawn = (userData.totalWithdrawn || 0) + amount;
+              userData.availableProfits = Math.max(0, userData.totalProfit - userData.totalWithdrawn);
+            }
+            localStorage.setItem('userData', JSON.stringify(userData));
+            console.log(`[withdraw/page.tsx] تم تحديث بيانات المستخدم في localStorage. الرصيد الجديد: ${userData.balances.USDT}`);
+          }
+        }
+      } catch (localStorageError) {
+        console.error('[withdraw/page.tsx] خطأ في تحديث بيانات المستخدم في localStorage:', localStorageError);
+      }
+
       showModalAlert(
         'success',
         'تم إنشاء طلب السحب بنجاح',
-        'سيتم مراجعة طلبك ومعالجته في غضون 24-48 ساعة.',
+        'سيتم مراجعة طلبك ومعالجته في غضون 24-48 ساعة. تم تحديث رصيدك.',
         'العودة إلى المحفظة',
         () => router.push('/wallet')
       );
@@ -207,6 +236,10 @@ function WithdrawContent() {
             </motion.p>
           </div>
 
+          {hasPendingWithdrawal && currentUser && (
+            <PendingWithdrawalInfo userId={currentUser.uid} />
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
               <WithdrawForm
@@ -215,6 +248,7 @@ function WithdrawContent() {
                 onSubmit={handleWithdrawSubmit}
                 initialAvailableProfits={availableProfits}
                 isProcessing={isLoadingProfits}
+                hasPendingWithdrawal={hasPendingWithdrawal}
               />
             </div>
 

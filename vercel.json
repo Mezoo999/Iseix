@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ],
+  "env": {
+    "NEXT_PUBLIC_FIREBASE_API_KEY": "AIzaSyAlh7PDk3WQgdqkU6E3eVqZKGz5Y7wzVj8",
+    "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN": "iseix-15880.firebaseapp.com",
+    "NEXT_PUBLIC_FIREBASE_PROJECT_ID": "iseix-15880",
+    "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET": "iseix-15880.appspot.com",
+    "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "1017998773369",
+    "NEXT_PUBLIC_FIREBASE_APP_ID": "1:1017998773369:web:4a8b71b2f2115ea30d18a8"
+  }
+}

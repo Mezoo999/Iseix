@@ -453,6 +453,13 @@ export default function AdminDashboard() {
               <FaUsers className="ml-2" />
               ترتيب المستخدمين حسب العضوية
             </button>
+            <button
+              className="w-full p-3 bg-warning text-white rounded-lg hover:bg-warning-dark transition-colors flex items-center justify-center"
+              onClick={() => router.push('/admin/update-membership')}
+            >
+              <FaArrowUp className="ml-2" />
+              تحديث مستويات العضوية
+            </button>
           </div>
         </div>
       </div>

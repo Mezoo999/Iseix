@@ -69,19 +69,17 @@ export const createWithdrawalRequest = async (
 
   try {
     // 1. التحقق من عدم وجود طلبات سحب معلقة (خارج المعاملة)
-    const pendingWithdrawalsQuery = query(
-      collection(db, 'transactions'),
-      where('userId', '==', userId),
-      where('type', '==', 'withdrawal'),
-      where('status', 'in', ['pending', 'processing'])
-    );
+    // استخدام الدالة المحسنة للتحقق من وجود طلبات سحب معلقة
+    console.log(`[UNIFIED-WITHDRAWAL] التحقق من وجود طلبات سحب معلقة للمستخدم: ${userId} قبل إنشاء طلب جديد`);
+    const hasPending = await hasPendingWithdrawals(userId);
 
-    const pendingWithdrawalsSnapshot = await getDocs(pendingWithdrawalsQuery);
-
-    if (!pendingWithdrawalsSnapshot.empty) {
-      console.log(`[UNIFIED-WITHDRAWAL] المستخدم ${userId} لديه طلبات سحب معلقة`);
+    if (hasPending) {
+      console.log(`[UNIFIED-WITHDRAWAL] المستخدم ${userId} لديه طلبات سحب معلقة، لا يمكن إنشاء طلب جديد`);
       throw new Error('لديك طلب سحب معلق بالفعل. يرجى الانتظار حتى تتم معالجته قبل إنشاء طلب جديد.');
     }
+
+    console.log(`[UNIFIED-WITHDRAWAL] لا يوجد طلبات سحب معلقة للمستخدم: ${userId}، يمكن المتابعة بإنشاء طلب جديد`);
+
 
     // استخدام المعاملات لضمان اتساق البيانات
     return await runTransaction(db, async (transaction) => {
@@ -365,6 +363,7 @@ export const hasPendingWithdrawals = async (userId: string): Promise<boolean> =>
       return false;
     }
 
+    // استخدام استعلام أكثر دقة للتأكد من عدم تفويت أي طلبات معلقة
     const pendingWithdrawalsQuery = query(
       collection(db, 'transactions'),
       where('userId', '==', userId),
@@ -372,15 +371,47 @@ export const hasPendingWithdrawals = async (userId: string): Promise<boolean> =>
       where('status', 'in', ['pending', 'processing'])
     );
 
+    // تنفيذ الاستعلام والتحقق من النتائج
     const pendingWithdrawalsSnapshot = await getDocs(pendingWithdrawalsQuery);
     const hasPending = !pendingWithdrawalsSnapshot.empty;
 
-    console.log(`[UNIFIED-WITHDRAWAL] نتيجة التحقق: ${hasPending ? 'يوجد طلبات معلقة' : 'لا يوجد طلبات معلقة'}`);
+    // طباعة معلومات مفصلة للتشخيص
+    if (hasPending) {
+      console.log(`[UNIFIED-WITHDRAWAL] تم العثور على ${pendingWithdrawalsSnapshot.size} طلب سحب معلق للمستخدم: ${userId}`);
+      pendingWithdrawalsSnapshot.forEach(doc => {
+        const data = doc.data();
+        console.log(`[UNIFIED-WITHDRAWAL] تفاصيل الطلب المعلق: ID=${doc.id}, المبلغ=${data.amount}, الحالة=${data.status}, تاريخ الإنشاء=${data.createdAt?.toDate?.() || 'غير معروف'}`);
+      });
+    } else {
+      console.log(`[UNIFIED-WITHDRAWAL] لم يتم العثور على طلبات سحب معلقة للمستخدم: ${userId}`);
+    }
+
+    // تحقق إضافي من مجموعة withdrawals القديمة (للتوافق مع النظام القديم)
+    if (!hasPending) {
+      console.log(`[UNIFIED-WITHDRAWAL] التحقق من مجموعة withdrawals القديمة للمستخدم: ${userId}`);
+      const oldPendingWithdrawalsQuery = query(
+        collection(db, 'withdrawals'),
+        where('userId', '==', userId),
+        where('status', 'in', ['pending', 'processing'])
+      );
+
+      const oldPendingWithdrawalsSnapshot = await getDocs(oldPendingWithdrawalsQuery);
+      const hasOldPending = !oldPendingWithdrawalsSnapshot.empty;
+
+      if (hasOldPending) {
+        console.log(`[UNIFIED-WITHDRAWAL] تم العثور على ${oldPendingWithdrawalsSnapshot.size} طلب سحب معلق في النظام القديم للمستخدم: ${userId}`);
+        return true;
+      }
+    }
+
+    console.log(`[UNIFIED-WITHDRAWAL] نتيجة التحقق النهائية: ${hasPending ? 'يوجد طلبات معلقة' : 'لا يوجد طلبات معلقة'}`);
 
     return hasPending;
   } catch (error) {
     console.error('[UNIFIED-WITHDRAWAL] Error checking pending withdrawals:', error);
-    return false;
+    // في حالة حدوث خطأ، نفترض وجود طلبات معلقة لمنع إنشاء طلبات متعددة
+    console.log('[UNIFIED-WITHDRAWAL] حدث خطأ أثناء التحقق، نفترض وجود طلبات معلقة لمنع إنشاء طلبات متعددة');
+    return true;
   }
 };
 

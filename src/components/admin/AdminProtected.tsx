@@ -4,7 +4,8 @@ import { useEffect, ReactNode, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { PageLoader } from '@/components/ui/Loaders';
-import { FaExclamationTriangle, FaLock, FaUserShield } from 'react-icons/fa';
+import { FaExclamationTriangle, FaLock, FaUserShield, FaSync, FaCheckCircle } from 'react-icons/fa';
+import { updateAllUsersMembershipLevels } from '@/services/referral';
 
 interface AdminProtectedProps {
   children: ReactNode;
@@ -15,6 +16,23 @@ export default function AdminProtected({ children }: AdminProtectedProps) {
   const { currentUser, userData, loading } = useAuth();
   const [isChecking, setIsChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isUpdatingMemberships, setIsUpdatingMemberships] = useState(false);
+  const [membershipUpdateResult, setMembershipUpdateResult] = useState<{
+    success: boolean;
+    total: number;
+    updated: number;
+  } | null>(null);
+
+  // إخفاء إشعار نتيجة التحديث بعد 10 ثوان
+  useEffect(() => {
+    if (membershipUpdateResult && !isUpdatingMemberships) {
+      const timer = setTimeout(() => {
+        setMembershipUpdateResult(null);
+      }, 10000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [membershipUpdateResult, isUpdatingMemberships]);
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -49,6 +67,28 @@ export default function AdminProtected({ children }: AdminProtectedProps) {
 
           console.log('مرحباً بك في لوحة المشرف');
           setIsChecking(false);
+
+          // تحديث مستويات العضوية تلقائيًا عند تسجيل دخول المشرف
+          setIsUpdatingMemberships(true);
+          try {
+            console.log('بدء تحديث مستويات العضوية تلقائيًا...');
+            const result = await updateAllUsersMembershipLevels();
+            console.log('تم تحديث مستويات العضوية بنجاح:', result);
+            setMembershipUpdateResult({
+              success: true,
+              total: result.total,
+              updated: result.updated
+            });
+          } catch (updateError) {
+            console.error('خطأ في تحديث مستويات العضوية:', updateError);
+            setMembershipUpdateResult({
+              success: false,
+              total: 0,
+              updated: 0
+            });
+          } finally {
+            setIsUpdatingMemberships(false);
+          }
         }
       } catch (err) {
         console.error('خطأ في التحقق من الصلاحيات:', err);
@@ -100,6 +140,33 @@ export default function AdminProtected({ children }: AdminProtectedProps) {
     );
   }
 
-  // إذا كان المستخدم مالكًا، اعرض محتوى الصفحة
-  return <>{children}</>;
+  // إذا كان المستخدم مالكًا، اعرض محتوى الصفحة مع إشعار تحديث مستويات العضوية
+  return (
+    <>
+      {isUpdatingMemberships && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-primary text-white px-4 py-2 rounded-lg shadow-lg flex items-center">
+          <FaSync className="animate-spin ml-2" />
+          <span>جاري تحديث مستويات العضوية...</span>
+        </div>
+      )}
+
+      {membershipUpdateResult && !isUpdatingMemberships && (
+        <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 ${membershipUpdateResult.success ? 'bg-success' : 'bg-error'} text-white px-4 py-2 rounded-lg shadow-lg flex items-center transition-opacity duration-500 opacity-90 hover:opacity-100`}>
+          {membershipUpdateResult.success ? (
+            <>
+              <FaCheckCircle className="ml-2" />
+              <span>تم تحديث مستويات العضوية بنجاح! تم تحديث {membershipUpdateResult.updated} من أصل {membershipUpdateResult.total} مستخدم.</span>
+            </>
+          ) : (
+            <>
+              <FaExclamationTriangle className="ml-2" />
+              <span>حدث خطأ أثناء تحديث مستويات العضوية.</span>
+            </>
+          )}
+        </div>
+      )}
+
+      {children}
+    </>
+  );
 }

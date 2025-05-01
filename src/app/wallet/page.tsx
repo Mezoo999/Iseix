@@ -13,7 +13,7 @@ import DepositForm from '@/components/wallet/DepositForm';
 import WithdrawForm from '@/components/wallet/WithdrawForm';
 import { PageLoader } from '@/components/ui/Loaders';
 import ActionButton from '@/components/ui/ActionButton';
-import { useAuth, refreshUserData } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useAlert } from '@/contexts/AlertContext';
 import { getUserTransactions, Transaction, createTransaction } from '@/services/transactions';
 import { createDepositRequest, getUserDepositRequests, DepositRequest } from '@/services/deposits';
@@ -28,7 +28,7 @@ import Card from '@/components/ui/Card';
 
 export default function WalletPage() {
   const router = useRouter();
-  const { currentUser, userData, loading } = useAuth();
+  const { currentUser, userData, loading, refreshUserData } = useAuth();
   const { showAlert, showModalAlert } = useAlert();
   const [activeTab, setActiveTab] = useState('deposit');
 
@@ -49,10 +49,14 @@ export default function WalletPage() {
   const [availableProfits, setAvailableProfits] = useState(0);
   const [isLoadingProfits, setIsLoadingProfits] = useState(false);
 
-  // التحقق من تسجيل الدخول
+  // التحقق من تسجيل الدخول وتحديث البيانات عند تحميل الصفحة
   useEffect(() => {
     if (!loading && !currentUser) {
       router.push('/login');
+    } else if (!loading && currentUser) {
+      // تحديث البيانات عند تحميل الصفحة
+      loadUserData();
+      loadAvailableProfits();
     }
   }, [currentUser, loading, router]);
 
@@ -114,6 +118,7 @@ export default function WalletPage() {
 
     try {
       console.log('[wallet/page.tsx] جلب بيانات المستخدم:', currentUser.uid);
+      // استخدام دالة refreshUserData من سياق المصادقة
       await refreshUserData();
       console.log('[wallet/page.tsx] تم تحديث بيانات المستخدم بنجاح');
     } catch (err) {

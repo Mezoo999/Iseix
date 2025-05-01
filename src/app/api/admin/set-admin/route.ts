@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { db } from '@/firebase/config';
 import { doc, getDoc, updateDoc, setDoc, serverTimestamp, increment } from 'firebase/firestore';
 
+export const dynamic = 'force-static';
+
 // معرف المستخدم الذي سيتم تعيينه كمدير
 const ADMIN_USER_ID = 'PAeCtT8GNoYwRTiLM1CjYL59a3J3';
 
@@ -25,7 +27,7 @@ export async function GET() {
     // التحقق من وجود المستخدم
     const userRef = doc(db, 'users', ADMIN_USER_ID);
     const userDoc = await getDoc(userRef);
-    
+
     if (userDoc.exists()) {
       // تحديث بيانات المستخدم الموجود
       await updateDoc(userRef, {
@@ -35,10 +37,10 @@ export async function GET() {
         totalDeposited: AMOUNT_TO_ADD,
         updatedAt: serverTimestamp()
       });
-      
-      return NextResponse.json({ 
-        success: true, 
-        message: `تم تحديث المستخدم ${ADMIN_USER_ID} كمدير وإضافة ${AMOUNT_TO_ADD} USDT` 
+
+      return NextResponse.json({
+        success: true,
+        message: `تم تحديث المستخدم ${ADMIN_USER_ID} كمدير وإضافة ${AMOUNT_TO_ADD} USDT`
       });
     } else {
       // إنشاء وثيقة مستخدم جديدة
@@ -63,19 +65,19 @@ export async function GET() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
-      
+
       await setDoc(userRef, userData);
-      
-      return NextResponse.json({ 
-        success: true, 
-        message: `تم إنشاء مستخدم جديد ${ADMIN_USER_ID} كمدير وإضافة ${AMOUNT_TO_ADD} USDT` 
+
+      return NextResponse.json({
+        success: true,
+        message: `تم إنشاء مستخدم جديد ${ADMIN_USER_ID} كمدير وإضافة ${AMOUNT_TO_ADD} USDT`
       });
     }
   } catch (error: any) {
     console.error('Error setting admin and adding funds:', error);
-    return NextResponse.json({ 
-      success: false, 
-      message: `حدث خطأ أثناء تعيين المستخدم كمدير وإضافة الرصيد: ${error.message}` 
+    return NextResponse.json({
+      success: false,
+      message: `حدث خطأ أثناء تعيين المستخدم كمدير وإضافة الرصيد: ${error.message}`
     }, { status: 500 });
   }
 }

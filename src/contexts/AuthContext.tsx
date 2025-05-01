@@ -12,6 +12,7 @@ interface AuthContextType {
   userData: UserData | null;
   loading: boolean;
   logout: () => Promise<void>;
+  refreshUserData: () => Promise<void>;
 }
 
 // إنشاء سياق المصادقة
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextType>({
   userData: null,
   loading: true,
   logout: async () => {},
+  refreshUserData: async () => {},
 });
 
 // مزود سياق المصادقة
@@ -162,11 +164,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // وظيفة تحديث بيانات المستخدم
+  const refreshUserData = async () => {
+    if (!currentUser) {
+      console.error('Cannot refresh user data: No user is logged in');
+      return;
+    }
+
+    try {
+      console.log('Refreshing user data for user:', currentUser.uid);
+      const userDataResult = await getUserData(currentUser.uid);
+
+      if (userDataResult) {
+        console.log('User data refreshed successfully');
+        setUserData(userDataResult);
+
+        // تحديث البيانات في التخزين المحلي
+        try {
+          const userDataToCache = {
+            ...userDataResult,
+            createdAt: userDataResult.createdAt ? userDataResult.createdAt.toString() : null,
+            updatedAt: userDataResult.updatedAt ? userDataResult.updatedAt.toString() : null
+          };
+          localStorage.setItem(`userData_${currentUser.uid}`, JSON.stringify(userDataToCache));
+          localStorage.setItem('currentUserData', JSON.stringify(userDataToCache));
+        } catch (cacheError) {
+          console.error('Error caching refreshed user data:', cacheError);
+        }
+      } else {
+        console.error('Failed to refresh user data: No data returned');
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+      throw error;
+    }
+  };
+
   const value = {
     currentUser,
     userData,
     loading,
     logout,
+    refreshUserData,
   };
 
   return (
