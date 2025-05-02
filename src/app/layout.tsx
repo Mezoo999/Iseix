@@ -7,10 +7,12 @@ import MobileBottomNav from "@/components/layout/MobileBottomNav";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import AnimatedBackground from "@/components/ui/AnimatedBackground";
 import ConnectionStatus from "@/components/ui/ConnectionStatus";
+import FirestoreBlockedWarning from "@/components/ui/FirestoreBlockedWarning";
 import { RouteChangeLoader } from "@/components/ui/PagePreloader";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import MobilePageTransition from "@/components/navigation/MobilePageTransition";
 import features from "@/config/features";
+import { Toaster } from 'react-hot-toast';
 
 // خط Geist للنصوص اللاتينية
 const geistSans = Geist({
@@ -82,6 +84,8 @@ export default function RootLayout({
               </MobilePageTransition>
               <MobileBottomNav />
               <ConnectionStatus />
+              <FirestoreBlockedWarning />
+              <Toaster position="top-center" toastOptions={{ duration: 4000 }} />
             </AuthProviderWrapper>
           </NotificationProvider>
         </ErrorBoundary>

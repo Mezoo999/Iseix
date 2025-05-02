@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import {
   FaTachometerAlt, FaUsers, FaExchangeAlt, FaWallet, FaUserTag,
   FaTasks, FaCog, FaBell, FaChartBar, FaBars, FaTimes, FaSignOutAlt,
-  FaUserShield, FaMoneyBillWave, FaUserCog
+  FaUserShield, FaMoneyBillWave, FaUserCog, FaUserLock
 } from 'react-icons/fa';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -17,19 +17,44 @@ export default function AdminSidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  const menuItems = [
-    { path: '/admin', label: 'لوحة التحكم', icon: <FaTachometerAlt /> },
-    { path: '/admin/users', label: 'المستخدمين', icon: <FaUsers /> },
-    { path: '/admin/transactions', label: 'المعاملات', icon: <FaExchangeAlt /> },
-    { path: '/admin/deposits', label: 'الإيداعات', icon: <FaMoneyBillWave /> },
-    { path: '/admin/withdrawals', label: 'السحوبات', icon: <FaWallet /> },
-    { path: '/admin/referrals', label: 'نظام الإحالات', icon: <FaUserTag /> },
-    { path: '/admin/membership', label: 'مستويات العضوية', icon: <FaUserCog /> },
-    { path: '/admin/tasks', label: 'المهام اليومية', icon: <FaTasks /> },
-    { path: '/admin/statistics', label: 'الإحصائيات', icon: <FaChartBar /> },
-    { path: '/admin/notifications', label: 'الإشعارات', icon: <FaBell /> },
-    { path: '/admin/settings', label: 'الإعدادات', icon: <FaCog /> },
+  // تنظيم القائمة في مجموعات
+  const menuGroups = [
+    {
+      title: 'عام',
+      items: [
+        { path: '/admin', label: 'لوحة التحكم', icon: <FaTachometerAlt /> },
+        { path: '/admin/statistics', label: 'الإحصائيات', icon: <FaChartBar /> },
+      ]
+    },
+    {
+      title: 'إدارة المستخدمين',
+      items: [
+        { path: '/admin/users', label: 'المستخدمين', icon: <FaUsers /> },
+        { path: '/admin/roles', label: 'الأدوار والصلاحيات', icon: <FaUserLock /> },
+      ]
+    },
+    {
+      title: 'المعاملات المالية',
+      items: [
+        { path: '/admin/transactions', label: 'المعاملات', icon: <FaExchangeAlt /> },
+        { path: '/admin/deposits', label: 'الإيداعات', icon: <FaMoneyBillWave /> },
+        { path: '/admin/withdrawals', label: 'السحوبات', icon: <FaWallet /> },
+      ]
+    },
+    {
+      title: 'إدارة المنصة',
+      items: [
+        { path: '/admin/referrals', label: 'نظام الإحالات', icon: <FaUserTag /> },
+        { path: '/admin/membership', label: 'مستويات العضوية', icon: <FaUserCog /> },
+        { path: '/admin/tasks', label: 'المهام اليومية', icon: <FaTasks /> },
+        { path: '/admin/notifications', label: 'الإشعارات', icon: <FaBell /> },
+        { path: '/admin/settings', label: 'الإعدادات', icon: <FaCog /> },
+      ]
+    },
   ];
+
+  // تسطيح القائمة للاستخدام في الواجهة المحمولة
+  const menuItems = menuGroups.flatMap(group => group.items);
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
@@ -96,31 +121,47 @@ export default function AdminSidebar() {
           </button>
         </div>
 
-        {/* عناصر القائمة */}
-        <nav className="py-4">
-          <ul className="space-y-1">
-            {menuItems.map((item) => {
-              const isActive = pathname === item.path;
-              return (
-                <li key={item.path}>
-                  <Link
-                    href={item.path}
-                    className={`flex items-center py-3 px-4 ${
-                      isActive
-                        ? 'bg-primary text-white'
-                        : 'text-foreground-muted hover:bg-background-lighter hover:text-white'
-                    } transition-colors`}
-                    onClick={() => {
-                      if (isMobileOpen) setIsMobileOpen(false);
-                    }}
-                  >
-                    <span className="text-xl">{item.icon}</span>
-                    {!isCollapsed && <span className="mr-3">{item.label}</span>}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+        {/* عناصر القائمة مقسمة إلى مجموعات */}
+        <nav className="py-4 overflow-y-auto">
+          {menuGroups.map((group, groupIndex) => (
+            <div key={`group-${groupIndex}`} className="mb-6">
+              {/* عنوان المجموعة */}
+              {!isCollapsed && (
+                <h3 className="text-xs text-foreground-muted mb-2 px-4 font-bold">
+                  {group.title}
+                </h3>
+              )}
+              {isCollapsed && (
+                <div className="border-t border-background-lighter my-3 mx-2"></div>
+              )}
+
+              {/* عناصر المجموعة */}
+              <ul className="space-y-1">
+                {group.items.map((item) => {
+                  const isActive = pathname === item.path;
+                  return (
+                    <li key={item.path}>
+                      <Link
+                        href={item.path}
+                        className={`flex items-center py-3 px-4 ${
+                          isActive
+                            ? 'bg-primary text-white'
+                            : 'text-foreground-muted hover:bg-background-lighter hover:text-white'
+                        } transition-colors`}
+                        onClick={() => {
+                          if (isMobileOpen) setIsMobileOpen(false);
+                        }}
+                        title={isCollapsed ? item.label : ''}
+                      >
+                        <span className={`text-xl ${isCollapsed ? 'mx-auto' : ''}`}>{item.icon}</span>
+                        {!isCollapsed && <span className="mr-3">{item.label}</span>}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
         </nav>
 
         {/* زر تسجيل الخروج */}

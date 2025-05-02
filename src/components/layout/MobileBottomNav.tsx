@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { usePathname, useRouter } from 'next/navigation';
-import { FaHome, FaWallet, FaChartLine, FaUsers, FaTasks, FaUser } from 'react-icons/fa';
+import { FaHome, FaWallet, FaChartLine, FaUsers, FaTasks, FaUser, FaGift } from 'react-icons/fa';
 import { useAuth } from '@/contexts/AuthContext';
 import useDeviceDetect from '@/hooks/useDeviceDetect';
 
@@ -50,9 +50,9 @@ export default function MobileBottomNav() {
   const navItems = [
     { path: '/', label: 'الرئيسية', icon: <FaHome /> },
     { path: '/wallet', label: 'المحفظة', icon: <FaWallet /> },
+    { path: '/rewards/lucky-wheel', label: 'عجلة الحظ', icon: <FaGift /> },
     { path: '/tasks', label: 'المهام', icon: <FaTasks /> },
-    { path: '/referrals', label: 'الإحالات', icon: <FaUsers /> },
-    { path: '/dashboard', label: 'حسابي', icon: <FaUser /> }
+    { path: '/me', label: 'حسابي', icon: <FaUser /> } // تغيير المسار إلى /me بدلاً من /dashboard
   ];
 
   // عرض الشريط دائمًا على الأجهزة المحمولة، وعلى الأجهزة الأخرى إذا كان عرض الشاشة أقل من 768 بكسل
@@ -62,7 +62,7 @@ export default function MobileBottomNav() {
 
   return (
     <motion.nav
-      className="fixed bottom-0 left-0 right-0 bg-background-dark/90 backdrop-blur-lg border-t border-primary/20 z-40 shadow-lg"
+      className="fixed bottom-0 left-0 right-0 bg-background-dark/95 backdrop-blur-lg border-t border-primary/20 z-40 shadow-lg"
       initial={{ y: 100 }}
       animate={{ y: isVisible ? 0 : 100 }}
       transition={{ duration: 0.3 }}
@@ -85,7 +85,7 @@ export default function MobileBottomNav() {
               }}
               className={`flex flex-col items-center justify-center w-full h-full bg-transparent border-none cursor-pointer relative ${
                 isActive ? 'z-10' : ''
-              }`}
+              } mobile-tap-highlight`} // إضافة فئة mobile-tap-highlight
               aria-label={item.label}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -93,7 +93,7 @@ export default function MobileBottomNav() {
               {/* خلفية العنصر النشط */}
               {isActive && (
                 <motion.div
-                  className="absolute inset-0 bg-primary/10 rounded-xl"
+                  className="absolute inset-0 bg-primary/15 rounded-xl"
                   layoutId="activeNavItemBackground"
                   transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 />
@@ -113,7 +113,7 @@ export default function MobileBottomNav() {
                   {/* تأثير توهج خلف الأيقونة النشطة */}
                   {isActive && (
                     <motion.div
-                      className="absolute inset-0 bg-primary/20 rounded-full blur-md -z-10"
+                      className="absolute inset-0 bg-primary/30 rounded-full blur-md -z-10"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
@@ -123,7 +123,7 @@ export default function MobileBottomNav() {
 
                 <motion.span
                   className={`text-xs ${isActive ? 'font-bold text-primary' : 'text-foreground-muted'}`}
-                  animate={{ opacity: isActive ? 1 : 0.7 }}
+                  animate={{ opacity: isActive ? 1 : 0.8 }}
                 >
                   {item.label}
                 </motion.span>
@@ -134,7 +134,7 @@ export default function MobileBottomNav() {
       </div>
 
       {/* مساحة إضافية في الأسفل للأجهزة التي تحتوي على شريط تنقل في الأسفل */}
-      <div className="h-safe-area-bottom bg-background-dark/90 backdrop-blur-lg"></div>
+      <div className="h-safe-area-bottom bg-background-dark/95 backdrop-blur-lg"></div>
     </motion.nav>
   );
 }

@@ -469,5 +469,7 @@ export const generateReferralCode = (userId?: string): string => {
   const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
   const userPart = userId ? userId.substring(0, 4).toUpperCase() : '';
 
-  return `${prefix}${userPart}${randomPart}`;
+  const referralCode = `${prefix}${userPart}${randomPart}`;
+  console.log(`[users.ts] تم إنشاء رمز إحالة جديد: ${referralCode} للمستخدم: ${userId || 'غير معروف'}`);
+  return referralCode;
 };

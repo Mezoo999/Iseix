@@ -4,8 +4,8 @@ import { useEffect, ReactNode, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { PageLoader } from '@/components/ui/Loaders';
-import { FaExclamationTriangle, FaLock, FaUserShield, FaSync, FaCheckCircle } from 'react-icons/fa';
-import { updateAllUsersMembershipLevels } from '@/services/referral';
+import { FaExclamationTriangle, FaLock, FaUserShield } from 'react-icons/fa';
+import { checkAdminAccess } from '@/services/permissions';
 
 interface AdminProtectedProps {
   children: ReactNode;
@@ -16,23 +16,6 @@ export default function AdminProtected({ children }: AdminProtectedProps) {
   const { currentUser, userData, loading } = useAuth();
   const [isChecking, setIsChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isUpdatingMemberships, setIsUpdatingMemberships] = useState(false);
-  const [membershipUpdateResult, setMembershipUpdateResult] = useState<{
-    success: boolean;
-    total: number;
-    updated: number;
-  } | null>(null);
-
-  // إخفاء إشعار نتيجة التحديث بعد 10 ثوان
-  useEffect(() => {
-    if (membershipUpdateResult && !isUpdatingMemberships) {
-      const timer = setTimeout(() => {
-        setMembershipUpdateResult(null);
-      }, 10000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [membershipUpdateResult, isUpdatingMemberships]);
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -48,47 +31,29 @@ export default function AdminProtected({ children }: AdminProtectedProps) {
             return;
           }
 
-          // التحقق من صلاحيات المالك
-          if (!userData) {
-            console.log('بيانات المستخدم غير متوفرة');
-            setError('لا يمكن التحقق من صلاحيات المستخدم. يرجى المحاولة مرة أخرى.');
-            return;
-          }
+          // التحقق من صلاحيات المشرف باستخدام خدمة التحقق من الصلاحيات
+          const accessResult = await checkAdminAccess(currentUser.uid, 'admin_dashboard');
 
-          if (!userData.isOwner) {
-            console.log('المستخدم ليس لديه صلاحيات المالك');
-            console.log('معلومات المستخدم:', currentUser.uid, userData);
-            setError('ليس لديك صلاحيات الوصول إلى لوحة المشرف');
-            setTimeout(() => {
-              router.push('/admin/make-me-owner');
-            }, 2000);
+          if (!accessResult.hasAccess) {
+            console.log('المستخدم ليس لديه صلاحيات المشرف:', accessResult.reason);
+            setError(accessResult.reason || 'ليس لديك صلاحيات الوصول إلى لوحة المشرف');
+
+            // التحقق من بيانات المستخدم للتوجيه المناسب
+            if (!userData) {
+              console.log('بيانات المستخدم غير متوفرة');
+              setTimeout(() => {
+                router.push('/dashboard');
+              }, 2000);
+            } else {
+              setTimeout(() => {
+                router.push('/dashboard');
+              }, 2000);
+            }
             return;
           }
 
           console.log('مرحباً بك في لوحة المشرف');
           setIsChecking(false);
-
-          // تحديث مستويات العضوية تلقائيًا عند تسجيل دخول المشرف
-          setIsUpdatingMemberships(true);
-          try {
-            console.log('بدء تحديث مستويات العضوية تلقائيًا...');
-            const result = await updateAllUsersMembershipLevels();
-            console.log('تم تحديث مستويات العضوية بنجاح:', result);
-            setMembershipUpdateResult({
-              success: true,
-              total: result.total,
-              updated: result.updated
-            });
-          } catch (updateError) {
-            console.error('خطأ في تحديث مستويات العضوية:', updateError);
-            setMembershipUpdateResult({
-              success: false,
-              total: 0,
-              updated: 0
-            });
-          } finally {
-            setIsUpdatingMemberships(false);
-          }
         }
       } catch (err) {
         console.error('خطأ في التحقق من الصلاحيات:', err);
@@ -128,45 +93,18 @@ export default function AdminProtected({ children }: AdminProtectedProps) {
           </div>
         )}
 
-        {currentUser && !userData?.isOwner && (
+        {currentUser && userData && (!userData.isAdmin && !userData.isOwner) && (
           <div className="flex flex-col items-center">
             <div className="p-3 rounded-full bg-primary/20 text-primary mb-3">
               <FaUserShield />
             </div>
-            <p className="text-sm text-center">جاري توجيهك إلى صفحة تعيين المالك...</p>
+            <p className="text-sm text-center">جاري توجيهك إلى لوحة التحكم الخاصة بك...</p>
           </div>
         )}
       </div>
     );
   }
 
-  // إذا كان المستخدم مالكًا، اعرض محتوى الصفحة مع إشعار تحديث مستويات العضوية
-  return (
-    <>
-      {isUpdatingMemberships && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-primary text-white px-4 py-2 rounded-lg shadow-lg flex items-center">
-          <FaSync className="animate-spin ml-2" />
-          <span>جاري تحديث مستويات العضوية...</span>
-        </div>
-      )}
-
-      {membershipUpdateResult && !isUpdatingMemberships && (
-        <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 ${membershipUpdateResult.success ? 'bg-success' : 'bg-error'} text-white px-4 py-2 rounded-lg shadow-lg flex items-center transition-opacity duration-500 opacity-90 hover:opacity-100`}>
-          {membershipUpdateResult.success ? (
-            <>
-              <FaCheckCircle className="ml-2" />
-              <span>تم تحديث مستويات العضوية بنجاح! تم تحديث {membershipUpdateResult.updated} من أصل {membershipUpdateResult.total} مستخدم.</span>
-            </>
-          ) : (
-            <>
-              <FaExclamationTriangle className="ml-2" />
-              <span>حدث خطأ أثناء تحديث مستويات العضوية.</span>
-            </>
-          )}
-        </div>
-      )}
-
-      {children}
-    </>
-  );
+  // إذا كان المستخدم مالكًا، اعرض محتوى الصفحة
+  return <>{children}</>;
 }

@@ -13,14 +13,23 @@ export default function WelcomeSection() {
           <div>
             <FadeInView direction="right" delay={0.1}>
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 text-gradient leading-tight">
-                منصة Iseix للاستثمار بالذكاء الاصطناعي
+                استثمر بذكاء مع <span className="text-primary">Iseix</span>
               </h1>
             </FadeInView>
 
             <FadeInView direction="right" delay={0.2}>
               <p className="text-lg sm:text-xl md:text-2xl mb-6 md:mb-10 text-foreground-muted leading-relaxed">
-                استثمر بذكاء مع أحدث تقنيات الذكاء الاصطناعي. نحن نستخدم خوارزميات متطورة لتحقيق أقصى عائد على استثماراتك.
+                منصة استثمارية متكاملة تجمع بين الذكاء الاصطناعي والخبرة المالية لتحقيق أقصى عائد على استثماراتك بأمان وموثوقية.
               </p>
+            </FadeInView>
+
+            <FadeInView direction="right" delay={0.3}>
+              <div className="bg-background-light/30 p-4 rounded-lg mb-6 border-r-4 border-primary">
+                <p className="text-lg font-bold text-primary mb-2">ما يميزنا:</p>
+                <p className="text-foreground-muted">
+                  نقدم لك فرصة الاستثمار في مشاريع مختارة بعناية، مع عوائد تصل إلى 15% شهريًا، وسحب أرباح يومي، ونظام إحالات مجزي.
+                </p>
+              </div>
             </FadeInView>
 
             <FadeInView direction="right" delay={0.3}>
@@ -63,6 +72,17 @@ export default function WelcomeSection() {
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-tr from-primary/30 to-secondary/30 rounded-2xl blur-xl transform -rotate-6"></div>
                 <div className="card card-primary p-4 sm:p-6 md:p-8 relative">
+                  {/* عرض الشعار ثلاثي الأبعاد */}
+                  <div className="w-full h-40 mb-4 flex justify-center items-center">
+                    <div className="w-40 h-40 relative">
+                      <img
+                        src="/images/logo.svg"
+                        alt="Iseix Logo"
+                        className="w-full h-full absolute top-0 left-0 animate-pulse-slow"
+                        style={{ animationDuration: '3s' }}
+                      />
+                    </div>
+                  </div>
                   <h3 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-center">كيف تبدأ الاستثمار؟</h3>
 
                   <div className="space-y-4 sm:space-y-6">

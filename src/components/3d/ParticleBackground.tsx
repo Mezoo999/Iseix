@@ -1,10 +1,11 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useMemo } from 'react';
 import * as THREE from 'three';
 import { useFrame, Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useMotionValue, useSpring, useTransform } from 'framer-motion';
+import Logo3D from './Logo3D';
 
 // تعريف أنواع البيانات
 interface MouseProps {
@@ -25,35 +26,78 @@ interface ParticlesProps {
 const Particles = ({ count = 2000, mouse }: ParticlesProps) => {
   const mesh = useRef<THREE.Points>(null);
   const light = useRef<THREE.PointLight>(null);
+  const [time, setTime] = useState(0);
 
-  // إنشاء الجزيئات
-  const particlesPosition = new Float32Array(count * 3);
-  const particlesScale = new Float32Array(count);
+  // إنشاء الجزيئات بألوان متنوعة تعكس هوية المنصة
+  const particlesPosition = useMemo(() => {
+    const positions = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const i3 = i * 3;
+      positions[i3] = (Math.random() - 0.5) * 15;
+      positions[i3 + 1] = (Math.random() - 0.5) * 15;
+      positions[i3 + 2] = (Math.random() - 0.5) * 15;
+    }
+    return positions;
+  }, [count]);
 
-  for (let i = 0; i < count; i++) {
-    const i3 = i * 3;
-    particlesPosition[i3] = (Math.random() - 0.5) * 10;
-    particlesPosition[i3 + 1] = (Math.random() - 0.5) * 10;
-    particlesPosition[i3 + 2] = (Math.random() - 0.5) * 10;
-    particlesScale[i] = Math.random();
-  }
+  const particlesScale = useMemo(() => {
+    const scales = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+      scales[i] = Math.random() * 2; // جعل بعض الجسيمات أكبر
+    }
+    return scales;
+  }, [count]);
 
-  // تحديث موضع الضوء بناءً على حركة الماوس
+  // إنشاء ألوان متنوعة للجسيمات
+  const particlesColor = useMemo(() => {
+    const colors = new Float32Array(count * 3);
+    const colorOptions = [
+      [0.23, 0.51, 0.96], // أزرق فاتح #3B82F6
+      [0.12, 0.23, 0.54], // أزرق داكن #1E3A8A
+      [0.55, 0.36, 0.96]  // أرجواني #8B5CF6
+    ];
+
+    for (let i = 0; i < count; i++) {
+      const i3 = i * 3;
+      const colorIndex = Math.floor(Math.random() * colorOptions.length);
+      const color = colorOptions[colorIndex];
+      colors[i3] = color[0];
+      colors[i3 + 1] = color[1];
+      colors[i3 + 2] = color[2];
+    }
+    return colors;
+  }, [count]);
+
+  // تحديث موضع الضوء والجسيمات
   useFrame(() => {
+    setTime(prev => prev + 0.01);
+
     if (light.current && mouse.x.get() !== 0 && mouse.y.get() !== 0) {
       light.current.position.x = mouse.x.get() * 10;
       light.current.position.y = mouse.y.get() * 10;
     }
 
     if (mesh.current) {
-      mesh.current.rotation.x += 0.001;
-      mesh.current.rotation.y += 0.001;
+      // دوران بطيء للجسيمات
+      mesh.current.rotation.x = Math.sin(time * 0.1) * 0.2;
+      mesh.current.rotation.y = Math.cos(time * 0.1) * 0.2;
+
+      // تأثير تمايل خفيف بناءً على حركة الماوس
+      mesh.current.rotation.z = THREE.MathUtils.lerp(
+        mesh.current.rotation.z,
+        mouse.x.get() * 0.2,
+        0.05
+      );
     }
   });
 
   return (
     <>
-      <pointLight ref={light} distance={20} intensity={15} color="#3B82F6" />
+      {/* إضافة أضواء متعددة لتحسين المظهر */}
+      <pointLight ref={light} distance={20} intensity={10} color="#3B82F6" />
+      <pointLight position={[5, 5, 5]} distance={15} intensity={5} color="#8B5CF6" />
+      <pointLight position={[-5, -5, -5]} distance={15} intensity={5} color="#1E3A8A" />
+
       <points ref={mesh}>
         <bufferGeometry>
           <bufferAttribute
@@ -61,60 +105,39 @@ const Particles = ({ count = 2000, mouse }: ParticlesProps) => {
             count={count}
             array={particlesPosition}
             itemSize={3}
-            args={[particlesPosition, 3]}
           />
           <bufferAttribute
             attach="attributes-scale"
             count={count}
             array={particlesScale}
             itemSize={1}
-            args={[particlesScale, 1]}
+          />
+          <bufferAttribute
+            attach="attributes-color"
+            count={count}
+            array={particlesColor}
+            itemSize={3}
           />
         </bufferGeometry>
         <pointsMaterial
-          size={0.1}
+          size={0.15}
           sizeAttenuation
           transparent
           depthWrite={false}
           blending={THREE.AdditiveBlending}
-          color="#3B82F6"
+          vertexColors
+          opacity={0.7}
         />
       </points>
     </>
   );
 };
 
-// مكون الكرة المتوهجة
-const GlowingSphere = ({ mouse }: { mouse: MouseProps }) => {
-  const mesh = useRef<THREE.Mesh>(null);
-
-  // تحديث موضع الكرة بناءً على حركة الماوس
-  useFrame(() => {
-    if (mesh.current) {
-      mesh.current.position.x = THREE.MathUtils.lerp(
-        mesh.current.position.x,
-        mouse.x.get() * 2,
-        0.1
-      );
-      mesh.current.position.y = THREE.MathUtils.lerp(
-        mesh.current.position.y,
-        mouse.y.get() * 2,
-        0.1
-      );
-    }
-  });
-
+// مكون الشعار المتوهج
+const GlowingLogo = ({ mouse }: { mouse: MouseProps }) => {
+  // استخدام مكون الشعار ثلاثي الأبعاد مع تمرير قيم الماوس
   return (
-    <mesh ref={mesh} position={[0, 0, 0]}>
-      <sphereGeometry args={[1, 32, 32]} />
-      <meshStandardMaterial
-        color="#3B82F6"
-        emissive="#3B82F6"
-        emissiveIntensity={2}
-        transparent
-        opacity={0.6}
-      />
-    </mesh>
+    <Logo3D mouse={mouse} />
   );
 };
 
@@ -182,7 +205,7 @@ const ParticleBackground = () => {
       <Canvas camera={{ position: [0, 0, 5], fov: 75 }}>
         <ambientLight intensity={0.2} />
         <Particles count={2000} mouse={{ x: normalizedMouseX, y: normalizedMouseY }} />
-        <GlowingSphere mouse={{ x: normalizedMouseX, y: normalizedMouseY }} />
+        <GlowingLogo mouse={{ x: normalizedMouseX, y: normalizedMouseY }} />
         <OrbitControls enableZoom={false} enablePan={false} enableRotate={false} />
       </Canvas>
     </div>

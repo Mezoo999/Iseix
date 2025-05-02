@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { FaUsers, FaCopy, FaCheckCircle, FaUserPlus, FaInfoCircle, FaNetworkWired, FaShareAlt, FaLink } from 'react-icons/fa';
+import { FaUsers, FaCopy, FaCheckCircle, FaUserPlus, FaInfoCircle, FaNetworkWired, FaShareAlt, FaLink,
+         FaWhatsapp, FaTelegram, FaFacebook, FaTwitter, FaEnvelope, FaQrcode, FaCoins, FaDownload } from 'react-icons/fa';
 
 import PageTemplate from '@/components/layout/PageTemplate';
 import ReferralStatsCard from '@/components/referral/ReferralStatsCard';
-import ReferralNetworkGraph from '@/components/referral/ReferralNetworkGraph';
+import EnhancedReferralNetworkGraph from '@/components/referral/EnhancedReferralNetworkGraph';
+import CommissionsHistory from '@/components/referral/CommissionsHistory';
 import { PageLoader, CircleLoader } from '@/components/ui/Loaders';
 import { useAuth } from '@/contexts/AuthContext';
 import { AlertProvider, useAlert } from '@/contexts/AlertContext';
@@ -15,6 +17,7 @@ import { getUserReferralCode, getUserReferrals, getUserReferralStats, Referral, 
 import { FadeInView } from '@/components/ui/AnimatedElements';
 import Card from '@/components/ui/Card';
 import ActionButton from '@/components/ui/ActionButton';
+import QRCode from 'react-qr-code';
 
 export default function ReferralsPage() {
   return (
@@ -259,30 +262,200 @@ function ReferralsContent() {
         delay={0.4}
       >
         <div className="bg-gradient-to-br from-background-dark/50 to-background-dark/30 p-5 rounded-xl border border-primary/10 shadow-inner">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="w-full">
-              <p className="text-sm text-foreground-muted mb-2 flex items-center">
-                <FaShareAlt className="ml-2 text-primary" />
-                شارك هذا الرابط مع أصدقائك للحصول على عمولات
-              </p>
-              <div className="bg-background-dark/50 p-4 rounded-lg border border-primary/20 text-sm font-mono overflow-x-auto flex items-center">
-                <span className="truncate">{referralLink}</span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* رمز QR */}
+            <div className="flex flex-col items-center justify-center">
+              <h3 className="text-lg font-bold mb-3 flex items-center">
+                <FaQrcode className="ml-2 text-primary" />
+                رمز QR للمشاركة
+              </h3>
+              <div className="bg-white p-4 rounded-lg mb-2 referral-qr-code">
+                <QRCode value={referralLink} size={150} />
+              </div>
+              <button
+                className="btn btn-sm btn-outline mt-2"
+                onClick={() => {
+                  try {
+                    // تنزيل رمز QR كصورة
+                    const svg = document.querySelector(".referral-qr-code svg");
+                    if (svg) {
+                      // تحويل SVG إلى صورة
+                      const svgData = new XMLSerializer().serializeToString(svg);
+                      const canvas = document.createElement("canvas");
+                      const ctx = canvas.getContext("2d");
+
+                      // إنشاء صورة من SVG
+                      const img = new Image();
+                      img.onload = () => {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+
+                        if (ctx) {
+                          // رسم الصورة على الكانفاس
+                          ctx.fillStyle = "white";
+                          ctx.fillRect(0, 0, canvas.width, canvas.height);
+                          ctx.drawImage(img, 0, 0);
+
+                          // تنزيل الصورة
+                          try {
+                            const dataUrl = canvas.toDataURL("image/png");
+                            const a = document.createElement("a");
+                            a.href = dataUrl;
+                            a.download = "referral-qr-code.png";
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                          } catch (e) {
+                            console.error("Error creating download link:", e);
+                            showAlert('error', 'حدث خطأ أثناء تنزيل رمز QR');
+                          }
+                        }
+                      };
+
+                      // معالجة الأخطاء المحتملة في تحميل الصورة
+                      img.onerror = () => {
+                        console.error("Error loading image from SVG");
+                        showAlert('error', 'حدث خطأ أثناء تحميل رمز QR');
+                      };
+
+                      // تحويل SVG إلى صورة
+                      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+                      const url = URL.createObjectURL(svgBlob);
+                      img.src = url;
+                    } else {
+                      showAlert('error', 'لم يتم العثور على رمز QR');
+                    }
+                  } catch (error) {
+                    console.error("Error downloading QR code:", error);
+                    showAlert('error', 'حدث خطأ أثناء تنزيل رمز QR');
+                  }
+                }}
+              >
+                <FaDownload className="ml-1" />
+                تنزيل رمز QR
+              </button>
+            </div>
+
+            {/* رابط الإحالة */}
+            <div className="md:col-span-2">
+              <div className="mb-4">
+                <p className="text-sm text-foreground-muted mb-2 flex items-center">
+                  <FaShareAlt className="ml-2 text-primary" />
+                  شارك هذا الرابط مع أصدقائك للحصول على عمولات
+                </p>
+                <div className="bg-background-dark/50 p-4 rounded-lg border border-primary/20 text-sm font-mono overflow-x-auto flex items-center mb-3">
+                  <span className="truncate">{referralLink}</span>
+                </div>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex justify-center"
+                >
+                  <ActionButton
+                    variant="primary"
+                    icon={isCopied ? <FaCheckCircle /> : <FaCopy />}
+                    onClick={copyReferralLink}
+                    className="whitespace-nowrap"
+                  >
+                    {isCopied ? 'تم النسخ' : 'نسخ الرابط'}
+                  </ActionButton>
+                </motion.div>
+              </div>
+
+              {/* أزرار المشاركة */}
+              <div className="mt-6">
+                <h3 className="text-lg font-bold mb-3 flex items-center">
+                  <FaShareAlt className="ml-2 text-primary" />
+                  مشاركة الرابط
+                </h3>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  <button
+                    className="btn btn-sm bg-green-500 hover:bg-green-600 text-white"
+                    onClick={() => {
+                      const url = `https://wa.me/?text=${encodeURIComponent(`انضم إلى منصة Iseix واستثمر بذكاء! استخدم رابط الإحالة الخاص بي للتسجيل: ${referralLink}`)}`;
+                      window.open(url, '_blank');
+                    }}
+                  >
+                    <FaWhatsapp className="ml-1" />
+                    واتساب
+                  </button>
+                  <button
+                    className="btn btn-sm bg-blue-500 hover:bg-blue-600 text-white"
+                    onClick={() => {
+                      const url = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent('انضم إلى منصة Iseix واستثمر بذكاء! استخدم رابط الإحالة الخاص بي للتسجيل:')}`;
+                      window.open(url, '_blank');
+                    }}
+                  >
+                    <FaTelegram className="ml-1" />
+                    تلجرام
+                  </button>
+                  <button
+                    className="btn btn-sm bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={() => {
+                      const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralLink)}`;
+                      window.open(url, '_blank');
+                    }}
+                  >
+                    <FaFacebook className="ml-1" />
+                    فيسبوك
+                  </button>
+                  <button
+                    className="btn btn-sm bg-blue-400 hover:bg-blue-500 text-white"
+                    onClick={() => {
+                      const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(`انضم إلى منصة Iseix واستثمر بذكاء! استخدم رابط الإحالة الخاص بي للتسجيل: ${referralLink}`)}`;
+                      window.open(url, '_blank');
+                    }}
+                  >
+                    <FaTwitter className="ml-1" />
+                    تويتر
+                  </button>
+                  <button
+                    className="btn btn-sm bg-red-500 hover:bg-red-600 text-white"
+                    onClick={() => {
+                      const url = `mailto:?subject=${encodeURIComponent('دعوة للانضمام إلى منصة Iseix')}&body=${encodeURIComponent(`مرحباً،\n\nأدعوك للانضمام إلى منصة Iseix للاستثمار الذكي.\n\nاستخدم رابط الإحالة الخاص بي للتسجيل: ${referralLink}\n\nمع تحياتي،`)}`;
+                      window.open(url, '_blank');
+                    }}
+                  >
+                    <FaEnvelope className="ml-1" />
+                    البريد
+                  </button>
+                </div>
+              </div>
+
+              {/* نصوص جاهزة للمشاركة */}
+              <div className="mt-6">
+                <h3 className="text-lg font-bold mb-3 flex items-center">
+                  <FaInfoCircle className="ml-2 text-primary" />
+                  نصوص جاهزة للمشاركة
+                </h3>
+                <div className="space-y-3">
+                  <div className="relative bg-background-dark/20 p-3 rounded-lg">
+                    <p className="text-sm">انضم إلى منصة Iseix واستثمر بذكاء! استخدم رابط الإحالة الخاص بي للتسجيل: {referralLink}</p>
+                    <button
+                      className="absolute top-2 left-2 text-primary hover:text-primary-dark"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`انضم إلى منصة Iseix واستثمر بذكاء! استخدم رابط الإحالة الخاص بي للتسجيل: ${referralLink}`);
+                        showAlert('success', 'تم نسخ النص بنجاح');
+                      }}
+                    >
+                      <FaCopy />
+                    </button>
+                  </div>
+                  <div className="relative bg-background-dark/20 p-3 rounded-lg">
+                    <p className="text-sm">أدعوك للانضمام إلى منصة Iseix للاستثمار وكسب الأرباح اليومية. سجل من خلال هذا الرابط واحصل على مكافأة ترحيبية: {referralLink}</p>
+                    <button
+                      className="absolute top-2 left-2 text-primary hover:text-primary-dark"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`أدعوك للانضمام إلى منصة Iseix للاستثمار وكسب الأرباح اليومية. سجل من خلال هذا الرابط واحصل على مكافأة ترحيبية: ${referralLink}`);
+                        showAlert('success', 'تم نسخ النص بنجاح');
+                      }}
+                    >
+                      <FaCopy />
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <ActionButton
-                variant="primary"
-                size="lg"
-                icon={isCopied ? <FaCheckCircle /> : <FaCopy />}
-                onClick={copyReferralLink}
-                className="whitespace-nowrap"
-              >
-                {isCopied ? 'تم النسخ' : 'نسخ الرابط'}
-              </ActionButton>
-            </motion.div>
           </div>
         </div>
       </Card>
@@ -317,7 +490,7 @@ function ReferralsContent() {
           </div>
         ) : (
           <div className="bg-gradient-to-br from-background-dark/50 to-background-dark/30 p-5 rounded-xl border border-primary/10 shadow-inner">
-            <ReferralNetworkGraph
+            <EnhancedReferralNetworkGraph
               data={{
                 id: currentUser.uid,
                 name: userData.displayName || currentUser.email?.split('@')[0] || 'أنت',
@@ -327,31 +500,44 @@ function ReferralsContent() {
                 children: referrals
                   .filter(r => r.level === 1)
                   .map(ref => ({
-                    id: ref.referredUid,
+                    id: ref.referredId, // استخدام referredId بدلاً من referredUid
                     name: ref.referredName || ref.referredEmail.split('@')[0],
                     email: ref.referredEmail,
                     level: 1,
                     status: ref.status as 'active' | 'pending' | 'inactive',
                     children: referrals
-                      .filter(r => r.level === 2 && r.parentReferrerId === ref.referredUid)
+                      .filter(r => r.level === 2 && r.parentReferrerId === ref.referredId)
                       .map(childRef => ({
-                        id: childRef.referredUid,
+                        id: childRef.referredId,
                         name: childRef.referredName || childRef.referredEmail.split('@')[0],
                         email: childRef.referredEmail,
                         level: 2,
-                        status: childRef.status as 'active' | 'pending' | 'inactive'
+                        status: childRef.status as 'active' | 'pending' | 'inactive',
+                        children: referrals
+                          .filter(r => r.level === 3 && r.parentReferrerId === childRef.referredId)
+                          .map(grandChildRef => ({
+                            id: grandChildRef.referredId,
+                            name: grandChildRef.referredName || grandChildRef.referredEmail.split('@')[0],
+                            email: grandChildRef.referredEmail,
+                            level: 3,
+                            status: grandChildRef.status as 'active' | 'pending' | 'inactive'
+                          }))
                       }))
                   }))
               }}
-              maxLevels={2}
             />
-            <div className="text-center mt-4">
-              <p className="text-sm text-foreground-muted">
-                يمكنك الحصول على عمولات من الإحالات حتى المستوى الثالث
-              </p>
-            </div>
           </div>
         )}
+      </Card>
+
+      {/* قسم سجل العمولات */}
+      <Card
+        className="mb-8"
+        title="سجل عمولات الإحالة"
+        icon={<FaCoins className="text-primary" />}
+        delay={0.6}
+      >
+        <CommissionsHistory />
       </Card>
     </PageTemplate>
   );

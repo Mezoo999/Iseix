@@ -5,7 +5,7 @@ import {
   FaUsers, FaMoneyBillWave, FaExchangeAlt, FaUserTag, FaChartLine,
   FaWallet, FaTasks, FaCrown, FaCog, FaBell, FaSearch, FaCheck,
   FaTimes, FaEdit, FaBan, FaTrash, FaUserShield, FaBolt, FaUserPlus,
-  FaSpinner, FaArrowUp, FaPlus
+  FaSpinner, FaArrowUp, FaPlus, FaUserLock, FaGift
 } from 'react-icons/fa';
 import { useAuth } from '@/contexts/AuthContext';
 import { collection, getDocs, query, where, orderBy, limit, Timestamp, doc, updateDoc, getDoc, serverTimestamp, addDoc } from 'firebase/firestore';
@@ -100,19 +100,15 @@ export default function AdminDashboard() {
 
   return (
     <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">لوحة تحكم المشرف</h1>
-        <p className="text-foreground-muted">مرحبًا بك في لوحة تحكم المشرف. يمكنك إدارة جميع جوانب المنصة من هنا.</p>
-      </div>
-      {/* رسالة ترحيب */}
+      {/* رأس الصفحة */}
       <div className="bg-gradient-to-r from-primary/20 to-primary/5 p-6 rounded-xl shadow-sm mb-8">
         <div className="flex items-center">
           <div className="p-3 rounded-full bg-primary/20 text-primary ml-4">
             <FaUserShield className="text-2xl" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold">مرحباً بك في لوحة تحكم المشرف</h2>
-            <p className="text-foreground-muted">يمكنك إدارة جميع جوانب المنصة من هنا. اختر أحد الأقسام أدناه للبدء.</p>
+            <h1 className="text-2xl font-bold">لوحة تحكم المشرف</h1>
+            <p className="text-foreground-muted">مرحبًا {userData?.displayName || 'المشرف'}، يمكنك إدارة المنصة من هنا.</p>
           </div>
         </div>
       </div>
@@ -161,72 +157,92 @@ export default function AdminDashboard() {
           </div>
           <h2 className="text-xl font-bold">الإجراءات السريعة</h2>
         </div>
-        <p className="text-foreground-muted mb-4">إجراءات سريعة للمهام الشائعة</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           <button
-            className="flex items-center justify-center p-4 bg-success/10 text-success rounded-lg hover:bg-success/20 transition-colors"
+            className="flex flex-col items-center justify-center p-4 bg-success/10 text-success rounded-lg hover:bg-success/20 transition-colors"
             onClick={() => router.push('/admin/deposits?filter=pending')}
           >
-            <FaMoneyBillWave className="ml-2" />
-            <span>مراجعة الإيداعات ({stats.pendingDeposits})</span>
+            <FaMoneyBillWave className="text-2xl mb-2" />
+            <span className="text-sm font-bold">الإيداعات</span>
+            <span className="text-xs mt-1">{stats.pendingDeposits} معلق</span>
           </button>
 
           <button
-            className="flex items-center justify-center p-4 bg-warning/10 text-warning rounded-lg hover:bg-warning/20 transition-colors"
+            className="flex flex-col items-center justify-center p-4 bg-warning/10 text-warning rounded-lg hover:bg-warning/20 transition-colors"
             onClick={() => router.push('/admin/withdrawals?filter=pending')}
           >
-            <FaWallet className="ml-2" />
-            <span>مراجعة السحوبات ({stats.pendingWithdrawals})</span>
+            <FaWallet className="text-2xl mb-2" />
+            <span className="text-sm font-bold">السحوبات</span>
+            <span className="text-xs mt-1">{stats.pendingWithdrawals} معلق</span>
           </button>
 
           <button
-            className="flex items-center justify-center p-4 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+            className="flex flex-col items-center justify-center p-4 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
             onClick={() => router.push('/admin/users')}
           >
-            <FaUserPlus className="ml-2" />
-            <span>إضافة مستخدم جديد</span>
+            <FaUsers className="text-2xl mb-2" />
+            <span className="text-sm font-bold">المستخدمين</span>
+            <span className="text-xs mt-1">{stats.totalUsers} مستخدم</span>
           </button>
 
           <button
-            className="flex items-center justify-center p-4 bg-info/10 text-info rounded-lg hover:bg-info/20 transition-colors"
-            onClick={() => router.push('/admin/add-funds')}
+            className="flex flex-col items-center justify-center p-4 bg-info/10 text-info rounded-lg hover:bg-info/20 transition-colors"
+            onClick={() => router.push('/admin/roles')}
           >
-            <FaMoneyBillWave className="ml-2" />
-            <span>إضافة رصيد لمستخدم</span>
+            <FaUserLock className="text-2xl mb-2" />
+            <span className="text-sm font-bold">الصلاحيات</span>
+            <span className="text-xs mt-1">إدارة الأدوار</span>
           </button>
 
           <button
-            className="flex items-center justify-center p-4 bg-success/10 text-success rounded-lg hover:bg-success/20 transition-colors"
-            onClick={() => router.push('/admin/upgrade-user')}
+            className="flex flex-col items-center justify-center p-4 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+            onClick={() => router.push('/admin/platform-stats')}
           >
-            <FaArrowUp className="ml-2" />
-            <span>ترقية مستوى مستخدم</span>
+            <FaChartLine className="text-2xl mb-2" />
+            <span className="text-sm font-bold">الإحصائيات</span>
+            <span className="text-xs mt-1">إحصائيات المنصة</span>
+          </button>
+
+          <button
+            className="flex flex-col items-center justify-center p-4 bg-success/10 text-success rounded-lg hover:bg-success/20 transition-colors"
+            onClick={() => router.push('/admin/lucky-wheel')}
+          >
+            <FaGift className="text-2xl mb-2" />
+            <span className="text-sm font-bold">عجلة الحظ</span>
+            <span className="text-xs mt-1">إدارة المكافآت</span>
+          </button>
+
+          <button
+            className="flex flex-col items-center justify-center p-4 bg-secondary/10 text-secondary rounded-lg hover:bg-secondary/20 transition-colors"
+            onClick={() => router.push('/admin/settings')}
+          >
+            <FaCog className="text-2xl mb-2" />
+            <span className="text-sm font-bold">الإعدادات</span>
+            <span className="text-xs mt-1">ضبط المنصة</span>
           </button>
         </div>
       </div>
 
       {/* أقسام لوحة التحكم */}
-      <h2 className="text-2xl font-bold mb-4">أقسام لوحة التحكم</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {/* قسم إدارة المستخدمين */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {/* قسم إدارة المستخدمين والصلاحيات */}
         <div className="bg-background-light p-6 rounded-xl shadow-sm border border-primary/10 hover:border-primary/30 transition-colors">
           <div className="flex items-center mb-4">
             <div className="p-3 rounded-full bg-primary/10 text-primary ml-3">
               <FaUsers className="text-xl" />
             </div>
-            <h2 className="text-xl font-bold">إدارة المستخدمين</h2>
+            <h2 className="text-xl font-bold">المستخدمين والصلاحيات</h2>
           </div>
-          <p className="text-foreground-muted mb-4">إدارة حسابات المستخدمين وصلاحياتهم</p>
 
-          <div className="bg-background-lighter/50 p-3 rounded-lg mb-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm">إجمالي المستخدمين:</span>
-              <span className="font-bold">{stats.totalUsers}</span>
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-background-lighter/50 p-3 rounded-lg text-center">
+              <div className="text-2xl font-bold">{stats.totalUsers}</div>
+              <div className="text-xs text-foreground-muted">إجمالي المستخدمين</div>
             </div>
-            <div className="flex justify-between items-center mt-2">
-              <span className="text-sm">المستخدمين النشطين:</span>
-              <span className="font-bold text-success">{stats.activeUsers}</span>
+            <div className="bg-background-lighter/50 p-3 rounded-lg text-center">
+              <div className="text-2xl font-bold text-success">{stats.activeUsers}</div>
+              <div className="text-xs text-foreground-muted">المستخدمين النشطين</div>
             </div>
           </div>
 
@@ -236,236 +252,124 @@ export default function AdminDashboard() {
               onClick={() => router.push('/admin/users')}
             >
               <FaUsers className="ml-2" />
-              عرض جميع المستخدمين
+              إدارة المستخدمين
             </button>
             <button
-              className="w-full p-3 bg-background-lighter text-foreground rounded-lg hover:bg-background-light/80 transition-colors flex items-center justify-center"
-              onClick={() => router.push('/admin/upgrade-user')}
+              className="w-full p-3 bg-info text-white rounded-lg hover:bg-info-dark transition-colors flex items-center justify-center"
+              onClick={() => router.push('/admin/roles')}
             >
-              <FaArrowUp className="ml-2" />
-              ترقية مستوى المستخدم
+              <FaUserLock className="ml-2" />
+              الأدوار والصلاحيات
             </button>
           </div>
         </div>
 
-        {/* قسم إدارة الإيداعات */}
+        {/* قسم إدارة المعاملات المالية */}
         <div className="bg-background-light p-6 rounded-xl shadow-sm border border-success/10 hover:border-success/30 transition-colors">
           <div className="flex items-center mb-4">
             <div className="p-3 rounded-full bg-success/10 text-success ml-3">
-              <FaMoneyBillWave className="text-xl" />
-            </div>
-            <h2 className="text-xl font-bold">إدارة الإيداعات</h2>
-          </div>
-          <p className="text-foreground-muted mb-4">مراجعة والموافقة على طلبات الإيداع</p>
-
-          <div className="bg-background-lighter/50 p-3 rounded-lg mb-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm">إجمالي الإيداعات:</span>
-              <span className="font-bold">{stats.totalDeposits.toFixed(2)} USDT</span>
-            </div>
-            <div className="flex justify-between items-center mt-2">
-              <span className="text-sm">الإيداعات المعلقة:</span>
-              <span className="font-bold text-warning">{stats.pendingDeposits}</span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <button
-              className="w-full p-3 bg-success text-white rounded-lg hover:bg-success-dark transition-colors flex items-center justify-center"
-              onClick={() => router.push('/admin/deposits')}
-            >
-              <FaMoneyBillWave className="ml-2" />
-              عرض جميع الإيداعات
-            </button>
-            <button
-              className="w-full p-3 bg-warning text-white rounded-lg hover:bg-warning-dark transition-colors flex items-center justify-center"
-              onClick={() => router.push('/admin/deposits?filter=pending')}
-            >
-              <FaCheck className="ml-2" />
-              الإيداعات المعلقة ({stats.pendingDeposits})
-            </button>
-          </div>
-        </div>
-
-        {/* قسم إدارة السحوبات */}
-        <div className="bg-background-light p-6 rounded-xl shadow-sm border border-warning/10 hover:border-warning/30 transition-colors">
-          <div className="flex items-center mb-4">
-            <div className="p-3 rounded-full bg-warning/10 text-warning ml-3">
-              <FaWallet className="text-xl" />
-            </div>
-            <h2 className="text-xl font-bold">إدارة السحوبات</h2>
-          </div>
-          <p className="text-foreground-muted mb-4">مراجعة والموافقة على طلبات السحب</p>
-
-          <div className="bg-background-lighter/50 p-3 rounded-lg mb-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm">إجمالي السحوبات:</span>
-              <span className="font-bold">{stats.totalWithdrawals.toFixed(2)} USDT</span>
-            </div>
-            <div className="flex justify-between items-center mt-2">
-              <span className="text-sm">السحوبات المعلقة:</span>
-              <span className="font-bold text-error">{stats.pendingWithdrawals}</span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <button
-              className="w-full p-3 bg-warning text-white rounded-lg hover:bg-warning-dark transition-colors flex items-center justify-center"
-              onClick={() => router.push('/admin/withdrawals')}
-            >
-              <FaWallet className="ml-2" />
-              عرض جميع السحوبات
-            </button>
-            <button
-              className="w-full p-3 bg-error text-white rounded-lg hover:bg-error-dark transition-colors flex items-center justify-center"
-              onClick={() => router.push('/admin/withdrawals?filter=pending')}
-            >
-              <FaCheck className="ml-2" />
-              السحوبات المعلقة ({stats.pendingWithdrawals})
-            </button>
-
-            <button
-              className="w-full p-3 bg-secondary text-white rounded-lg hover:bg-secondary-dark transition-colors flex items-center justify-center"
-              onClick={() => router.push('/admin/test-data')}
-            >
-              <FaPlus className="ml-2" />
-              إنشاء بيانات اختبارية
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* صف ثاني من الأقسام */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {/* قسم إدارة المعاملات */}
-        <div className="bg-background-light p-6 rounded-xl shadow-sm border border-info/10 hover:border-info/30 transition-colors">
-          <div className="flex items-center mb-4">
-            <div className="p-3 rounded-full bg-info/10 text-info ml-3">
               <FaExchangeAlt className="text-xl" />
             </div>
-            <h2 className="text-xl font-bold">إدارة المعاملات</h2>
+            <h2 className="text-xl font-bold">المعاملات المالية</h2>
           </div>
-          <p className="text-foreground-muted mb-4">عرض وتتبع جميع المعاملات على المنصة</p>
 
-          <div className="bg-background-lighter/50 p-3 rounded-lg mb-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm">إجمالي المعاملات:</span>
-              <span className="font-bold">{stats.totalTransactions}</span>
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-background-lighter/50 p-3 rounded-lg text-center">
+              <div className="text-2xl font-bold text-success">{stats.totalDeposits.toFixed(1)}</div>
+              <div className="text-xs text-foreground-muted">إجمالي الإيداعات</div>
             </div>
-            <div className="flex justify-between items-center mt-2">
-              <span className="text-sm">إجمالي الأرباح:</span>
-              <span className="font-bold text-success">{stats.totalProfit.toFixed(2)} USDT</span>
+            <div className="bg-background-lighter/50 p-3 rounded-lg text-center">
+              <div className="text-2xl font-bold text-warning">{stats.totalWithdrawals.toFixed(1)}</div>
+              <div className="text-xs text-foreground-muted">إجمالي السحوبات</div>
             </div>
           </div>
 
           <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                className="p-3 bg-success text-white rounded-lg hover:bg-success-dark transition-colors flex items-center justify-center"
+                onClick={() => router.push('/admin/deposits')}
+              >
+                <FaMoneyBillWave className="ml-2" />
+                الإيداعات
+              </button>
+              <button
+                className="p-3 bg-warning text-white rounded-lg hover:bg-warning-dark transition-colors flex items-center justify-center"
+                onClick={() => router.push('/admin/withdrawals')}
+              >
+                <FaWallet className="ml-2" />
+                السحوبات
+              </button>
+            </div>
             <button
               className="w-full p-3 bg-info text-white rounded-lg hover:bg-info-dark transition-colors flex items-center justify-center"
               onClick={() => router.push('/admin/transactions')}
             >
               <FaExchangeAlt className="ml-2" />
-              عرض جميع المعاملات
-            </button>
-            <button
-              className="w-full p-3 bg-background-lighter text-foreground rounded-lg hover:bg-background-light/80 transition-colors flex items-center justify-center"
-              onClick={() => router.push('/admin/transactions?filter=profit')}
-            >
-              <FaChartLine className="ml-2" />
-              عرض معاملات الأرباح
+              جميع المعاملات
             </button>
           </div>
         </div>
 
-        {/* قسم إدارة الإحالات */}
-        <div className="bg-background-light p-6 rounded-xl shadow-sm border border-primary/10 hover:border-primary/30 transition-colors">
+        {/* قسم إدارة المنصة */}
+        <div className="bg-background-light p-6 rounded-xl shadow-sm border border-warning/10 hover:border-warning/30 transition-colors">
           <div className="flex items-center mb-4">
-            <div className="p-3 rounded-full bg-primary/10 text-primary ml-3">
-              <FaUserTag className="text-xl" />
+            <div className="p-3 rounded-full bg-warning/10 text-warning ml-3">
+              <FaCog className="text-xl" />
             </div>
-            <h2 className="text-xl font-bold">إدارة الإحالات</h2>
+            <h2 className="text-xl font-bold">إدارة المنصة</h2>
           </div>
-          <p className="text-foreground-muted mb-4">إدارة نظام الإحالات والمكافآت</p>
 
-          <div className="bg-background-lighter/50 p-3 rounded-lg mb-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm">إجمالي الإحالات:</span>
-              <span className="font-bold">{stats.totalReferrals}</span>
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-background-lighter/50 p-3 rounded-lg text-center">
+              <div className="text-2xl font-bold text-primary">{stats.totalReferrals}</div>
+              <div className="text-xs text-foreground-muted">إجمالي الإحالات</div>
             </div>
-            <div className="flex justify-between items-center mt-2">
-              <span className="text-sm">متوسط الإحالات لكل مستخدم:</span>
-              <span className="font-bold text-primary">
-                {stats.totalUsers > 0 ? (stats.totalReferrals / stats.totalUsers).toFixed(2) : '0.00'}
-              </span>
+            <div className="bg-background-lighter/50 p-3 rounded-lg text-center">
+              <div className="text-2xl font-bold text-success">6</div>
+              <div className="text-xs text-foreground-muted">مستويات العضوية</div>
             </div>
           </div>
 
           <div className="space-y-2">
-            <button
-              className="w-full p-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors flex items-center justify-center"
-              onClick={() => router.push('/admin/referrals')}
-            >
-              <FaUserTag className="ml-2" />
-              عرض الإحالات
-            </button>
-            <button
-              className="w-full p-3 bg-background-lighter text-foreground rounded-lg hover:bg-background-light/80 transition-colors flex items-center justify-center"
-              onClick={() => router.push('/admin/referrals?filter=active')}
-            >
-              <FaUsers className="ml-2" />
-              عرض المروجين النشطين
-            </button>
-          </div>
-        </div>
-
-        {/* قسم إدارة العضويات */}
-        <div className="bg-background-light p-6 rounded-xl shadow-sm border border-success/10 hover:border-success/30 transition-colors">
-          <div className="flex items-center mb-4">
-            <div className="p-3 rounded-full bg-success/10 text-success ml-3">
-              <FaCrown className="text-xl" />
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                className="p-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors flex items-center justify-center"
+                onClick={() => router.push('/admin/referrals')}
+              >
+                <FaUserTag className="ml-2" />
+                الإحالات
+              </button>
+              <button
+                className="p-3 bg-success text-white rounded-lg hover:bg-success-dark transition-colors flex items-center justify-center"
+                onClick={() => router.push('/admin/membership')}
+              >
+                <FaCrown className="ml-2" />
+                العضويات
+              </button>
             </div>
-            <h2 className="text-xl font-bold">إدارة العضويات</h2>
-          </div>
-          <p className="text-foreground-muted mb-4">إدارة مستويات العضوية والمزايا</p>
-
-          <div className="bg-background-lighter/50 p-3 rounded-lg mb-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm">عدد المستويات:</span>
-              <span className="font-bold">6 مستويات</span>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                className="p-3 bg-warning text-white rounded-lg hover:bg-warning-dark transition-colors flex items-center justify-center"
+                onClick={() => router.push('/admin/tasks')}
+              >
+                <FaTasks className="ml-2" />
+                المهام
+              </button>
+              <button
+                className="p-3 bg-info text-white rounded-lg hover:bg-info-dark transition-colors flex items-center justify-center"
+                onClick={() => router.push('/admin/notifications')}
+              >
+                <FaBell className="ml-2" />
+                الإشعارات
+              </button>
             </div>
-            <div className="flex justify-between items-center mt-2">
-              <span className="text-sm">أعلى معدل ربح:</span>
-              <span className="font-bold text-success">5.04%</span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <button
-              className="w-full p-3 bg-success text-white rounded-lg hover:bg-success-dark transition-colors flex items-center justify-center"
-              onClick={() => router.push('/admin/membership')}
-            >
-              <FaCrown className="ml-2" />
-              عرض مستويات العضوية
-            </button>
-            <button
-              className="w-full p-3 bg-background-lighter text-foreground rounded-lg hover:bg-background-light/80 transition-colors flex items-center justify-center"
-              onClick={() => router.push('/admin/users?sort=membership')}
-            >
-              <FaUsers className="ml-2" />
-              ترتيب المستخدمين حسب العضوية
-            </button>
-            <button
-              className="w-full p-3 bg-warning text-white rounded-lg hover:bg-warning-dark transition-colors flex items-center justify-center"
-              onClick={() => router.push('/admin/update-membership')}
-            >
-              <FaArrowUp className="ml-2" />
-              تحديث مستويات العضوية
-            </button>
           </div>
         </div>
       </div>
 
-      {/* صف ثالث من الأقسام */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      {/* الإحصائيات والرسوم البيانية */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* قسم إدارة المهام */}
         <div className="bg-background-light p-6 rounded-xl shadow-sm border border-warning/10 hover:border-warning/30 transition-colors">
           <div className="flex items-center mb-4">

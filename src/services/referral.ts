@@ -20,6 +20,9 @@ export interface Referral {
   referrerId: string;
   referredId: string;
   referredEmail: string;
+  referredName?: string; // اسم المستخدم المحال
+  referredUid?: string; // معرف المستخدم المحال (نفس referredId)
+  parentReferrerId?: string; // معرف المستخدم المحيل الأصلي (للمستويات الأعلى)
   status: 'pending' | 'active' | 'completed';
   commission: number;
   currency: string;
@@ -141,21 +144,31 @@ export const getUserReferralCode = async (userId: string): Promise<string> => {
 // الحصول على معرف المستخدم من رمز الإحالة
 export const getUserIdFromReferralCode = async (referralCode: string): Promise<string | null> => {
   try {
+    console.log(`[referral.ts] البحث عن مستخدم برمز الإحالة: ${referralCode}`);
+
+    if (!referralCode || referralCode.trim() === '') {
+      console.log('[referral.ts] رمز الإحالة فارغ أو غير صالح');
+      return null;
+    }
+
     const usersQuery = query(
       collection(db, 'users'),
-      where('referralCode', '==', referralCode)
+      where('referralCode', '==', referralCode.trim())
     );
 
     const usersSnapshot = await getDocs(usersQuery);
 
     if (usersSnapshot.empty) {
+      console.log(`[referral.ts] لم يتم العثور على مستخدم برمز الإحالة: ${referralCode}`);
       return null;
     }
 
-    return usersSnapshot.docs[0].id;
+    const userId = usersSnapshot.docs[0].id;
+    console.log(`[referral.ts] تم العثور على المستخدم: ${userId} برمز الإحالة: ${referralCode}`);
+    return userId;
   } catch (error) {
-    console.error('Error getting user ID from referral code:', error);
-    throw error;
+    console.error('[referral.ts] Error getting user ID from referral code:', error);
+    return null; // نعيد null بدلاً من رمي الخطأ لتجنب فشل عملية التسجيل
   }
 };
 
@@ -166,6 +179,13 @@ export const createReferral = async (
   referredEmail: string
 ): Promise<string> => {
   try {
+    console.log(`[referral.ts] إنشاء إحالة جديدة: المحيل=${referrerId}, المحال=${referredId}, البريد=${referredEmail}`);
+
+    if (!referrerId || !referredId) {
+      console.error('[referral.ts] معرف المحيل أو المحال غير صالح');
+      throw new Error('Invalid referrer or referred ID');
+    }
+
     // التحقق من عدم وجود إحالة سابقة
     const referralsQuery = query(
       collection(db, 'referrals'),
@@ -175,7 +195,19 @@ export const createReferral = async (
     const referralsSnapshot = await getDocs(referralsQuery);
 
     if (!referralsSnapshot.empty) {
+      console.log(`[referral.ts] المستخدم ${referredId} لديه محيل بالفعل`);
       throw new Error('User already has a referrer');
+    }
+
+    // الحصول على اسم المستخدم المحال إذا كان متاحًا
+    let referredName = '';
+    try {
+      const referredUserDoc = await getDoc(doc(db, 'users', referredId));
+      if (referredUserDoc.exists()) {
+        referredName = referredUserDoc.data().displayName || '';
+      }
+    } catch (error) {
+      console.error('[referral.ts] Error getting referred user name:', error);
     }
 
     // إنشاء إحالة مباشرة (المستوى الأول)
@@ -183,6 +215,8 @@ export const createReferral = async (
       referrerId,
       referredId,
       referredEmail,
+      referredName, // إضافة اسم المستخدم المحال
+      referredUid: referredId, // إضافة معرف المستخدم المحال (نفس referredId)
       status: 'pending',
       commission: 0,
       currency: 'USDT',
@@ -216,6 +250,9 @@ export const createReferral = async (
         referrerId: level2Referrer.referrerId,
         referredId,
         referredEmail,
+        referredName, // إضافة اسم المستخدم المحال
+        referredUid: referredId, // إضافة معرف المستخدم المحال
+        parentReferrerId: referrerId, // إضافة معرف المستخدم المحيل الأصلي
         status: 'pending',
         commission: 0,
         currency: 'USDT',
@@ -242,6 +279,9 @@ export const createReferral = async (
           referrerId: level3Referrer.referrerId,
           referredId,
           referredEmail,
+          referredName, // إضافة اسم المستخدم المحال
+          referredUid: referredId, // إضافة معرف المستخدم المحال
+          parentReferrerId: level2Referrer.referrerId, // إضافة معرف المستخدم المحيل للمستوى الثاني
           status: 'pending',
           commission: 0,
           currency: 'USDT',
@@ -268,6 +308,9 @@ export const createReferral = async (
             referrerId: level4Referrer.referrerId,
             referredId,
             referredEmail,
+            referredName, // إضافة اسم المستخدم المحال
+            referredUid: referredId, // إضافة معرف المستخدم المحال
+            parentReferrerId: level3Referrer.referrerId, // إضافة معرف المستخدم المحيل للمستوى الثالث
             status: 'pending',
             commission: 0,
             currency: 'USDT',
@@ -294,6 +337,9 @@ export const createReferral = async (
               referrerId: level5Referrer.referrerId,
               referredId,
               referredEmail,
+              referredName, // إضافة اسم المستخدم المحال
+              referredUid: referredId, // إضافة معرف المستخدم المحال
+              parentReferrerId: level4Referrer.referrerId, // إضافة معرف المستخدم المحيل للمستوى الرابع
               status: 'pending',
               commission: 0,
               currency: 'USDT',
@@ -320,6 +366,9 @@ export const createReferral = async (
                 referrerId: level6Referrer.referrerId,
                 referredId,
                 referredEmail,
+                referredName, // إضافة اسم المستخدم المحال
+                referredUid: referredId, // إضافة معرف المستخدم المحال
+                parentReferrerId: level5Referrer.referrerId, // إضافة معرف المستخدم المحيل للمستوى الخامس
                 status: 'pending',
                 commission: 0,
                 currency: 'USDT',
@@ -429,13 +478,34 @@ export const addReferralCommission = async (
         continue;
       }
 
-      // تحديث عمولة الإحالة
+      // تحديث عمولة الإحالة وتغيير الحالة إلى "active"
       await updateDoc(doc(db, 'referrals', referralDoc.id), {
         commission: increment(commissionAmount),
         currency,
-        status: 'active',
+        status: 'active', // تحديث الحالة إلى "نشط"
         updatedAt: serverTimestamp(),
       });
+
+      // تحديث حالة جميع الإحالات المرتبطة بنفس المستخدم المحال
+      try {
+        const relatedReferralsQuery = query(
+          collection(db, 'referrals'),
+          where('referredId', '==', referredId)
+        );
+
+        const relatedReferralsSnapshot = await getDocs(relatedReferralsQuery);
+
+        for (const relatedDoc of relatedReferralsSnapshot.docs) {
+          if (relatedDoc.id !== referralDoc.id) {
+            await updateDoc(doc(db, 'referrals', relatedDoc.id), {
+              status: 'active',
+              updatedAt: serverTimestamp(),
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error updating related referrals status:', error);
+      }
 
       // إضافة العمولة إلى رصيد المستخدم المحيل
       await updateDoc(referrerRef, {

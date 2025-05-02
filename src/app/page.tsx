@@ -8,12 +8,11 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import ParticleBackground from '@/components/3d/ParticleBackground';
 import AnimatedButton from '@/components/ui/AnimatedButton';
-import FeatureCard from '@/components/ui/FeatureCard';
-import PlanCard from '@/components/ui/PlanCard';
 import WelcomeSection from '@/components/home/WelcomeSection';
 import StatsSection from '@/components/home/StatsSection';
 import HowItWorksSection from '@/components/home/HowItWorksSection';
 import { FadeInView } from '@/components/ui/AnimatedElements';
+import LoadingScreen from '@/components/ui/LoadingScreen';
 
 export default function Home() {
   // بيانات الميزات
@@ -104,6 +103,9 @@ export default function Home() {
 
   return (
     <>
+      {/* شاشة التحميل */}
+      <LoadingScreen minDisplayTime={2000} />
+
       {/* خلفية الجزيئات */}
       <ParticleBackground />
 

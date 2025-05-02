@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { FaBars, FaUser, FaWallet, FaSignOutAlt, FaChartLine, FaTasks, FaUserShield } from 'react-icons/fa';
+import { FaBars, FaUser, FaWallet, FaSignOutAlt, FaChartLine, FaTasks, FaUserShield, FaGift } from 'react-icons/fa';
 import { useAuth } from '@/contexts/AuthContext';
 import MobileNav from './MobileNav';
 import SmartNotifications from '@/components/notifications/SmartNotifications';
@@ -86,11 +86,12 @@ const Navbar = () => {
           }}
         >
           <motion.div
-            className="text-2xl font-bold text-gradient"
+            className="flex items-center"
             whileHover={{ scale: 1.05 }}
             transition={{ type: 'spring', stiffness: 300 }}
           >
-            Iseix
+            <img src="/images/logo.svg" alt="Iseix Logo" className="h-10 w-10 ml-2" />
+            <span className="text-2xl font-bold text-gradient">Iseix</span>
           </motion.div>
         </motion.div>
 
@@ -145,6 +146,21 @@ const Navbar = () => {
                 <SmartNotifications userId={currentUser.uid} />
               </div>
 
+              <motion.button
+                className="btn btn-outline mr-3 flex items-center"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  try {
+                    window.location.href = '/rewards/lucky-wheel';
+                  } catch (error) {
+                    console.error('Navigation error:', error);
+                  }
+                }}
+              >
+                <FaGift className="ml-2" />
+                عجلة الحظ
+              </motion.button>
               <motion.button
                 className="btn btn-outline mr-3 flex items-center"
                 whileHover={{ scale: 1.05 }}

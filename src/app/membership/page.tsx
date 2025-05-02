@@ -16,6 +16,9 @@ import { MembershipLevel } from '@/services/dailyTasks';
 import Card from '@/components/ui/Card';
 import Tabs from '@/components/ui/Tabs';
 import TabContent from '@/components/ui/TabContent';
+import MembershipLevelsCard from '@/components/tasks/MembershipLevelsCard';
+import TaskRewardsHistory from '@/components/tasks/TaskRewardsHistory';
+import { getUserTaskRewards } from '@/services/dailyTasks';
 
 export default function MembershipPage() {
   return (
@@ -33,6 +36,8 @@ function MembershipContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [referralCount, setReferralCount] = useState(0);
+  const [taskRewards, setTaskRewards] = useState<any[]>([]);
+  const [isLoadingRewards, setIsLoadingRewards] = useState(true);
 
   // التحقق من تسجيل الدخول
   useEffect(() => {
@@ -41,17 +46,33 @@ function MembershipContent() {
     }
   }, [currentUser, loading, router]);
 
-  // محاكاة تحميل البيانات
+  // تحميل البيانات
   useEffect(() => {
     if (currentUser) {
-      // محاكاة تحميل عدد الإحالات
+      // تحميل عدد الإحالات
       setTimeout(() => {
         // هنا يمكن استبدالها بالبيانات الحقيقية من قاعدة البيانات
         setReferralCount(5);
         setIsLoading(false);
       }, 1000);
+
+      // تحميل مكافآت المهام
+      const loadTaskRewards = async () => {
+        setIsLoadingRewards(true);
+        try {
+          const rewards = await getUserTaskRewards(currentUser.uid);
+          setTaskRewards(rewards);
+        } catch (err) {
+          console.error('Error loading task rewards:', err);
+          showAlert('error', 'حدث خطأ أثناء تحميل سجل المكافآت');
+        } finally {
+          setIsLoadingRewards(false);
+        }
+      };
+
+      loadTaskRewards();
     }
-  }, [currentUser]);
+  }, [currentUser, showAlert]);
 
   // إذا كان التحميل جاريًا، اعرض شاشة التحميل
   if (loading || isLoading) {
@@ -127,7 +148,9 @@ function MembershipContent() {
           tabs={[
             { id: 'overview', label: 'نظرة عامة' },
             { id: 'requirements', label: 'متطلبات الترقية' },
-            { id: 'benefits', label: 'المزايا' }
+            { id: 'benefits', label: 'المزايا' },
+            { id: 'rewards', label: 'المكافآت' },
+            { id: 'levels', label: 'مستويات العضوية المتقدمة' }
           ]}
           defaultTab={activeTab}
           onChange={setActiveTab}
@@ -168,6 +191,30 @@ function MembershipContent() {
         <Card className="mb-6" delay={0.4}>
           <MembershipBenefits currentLevel={membershipLevel} />
         </Card>
+      </TabContent>
+
+      {/* علامة تبويب المكافآت */}
+      <TabContent id="rewards" activeTab={activeTab}>
+        <FadeInView direction="up" delay={0.4}>
+          <TaskRewardsHistory
+            rewards={taskRewards.map(reward => ({
+              id: reward.id,
+              amount: reward.amount,
+              currency: reward.currency || 'USDT',
+              timestamp: reward.timestamp?.toDate ? new Date(reward.timestamp.toDate()) : new Date(reward.timestamp),
+              taskTitle: 'مكافأة مهمة يومية',
+              profitRate: reward.profitRate
+            }))}
+            isLoading={isLoadingRewards}
+          />
+        </FadeInView>
+      </TabContent>
+
+      {/* علامة تبويب مستويات العضوية المتقدمة */}
+      <TabContent id="levels" activeTab={activeTab}>
+        <FadeInView direction="up" delay={0.4}>
+          <MembershipLevelsCard currentLevel={membershipLevel} />
+        </FadeInView>
       </TabContent>
     </PageTemplate>
   );

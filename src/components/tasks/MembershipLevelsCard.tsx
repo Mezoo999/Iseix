@@ -198,7 +198,7 @@ export default function MembershipLevelsCard({ currentLevel }: MembershipLevelsC
             </div>
           </div>
           <div className="text-center">
-            <p className="text-sm text-foreground-muted">معدل المكافأة</p>
+            <p className="text-sm text-foreground-muted">معدل المكافأة (إجمالي للمهام الثلاث)</p>
             <p className="text-lg font-bold text-success">
               {levels[currentLevelIndex].rate}
             </p>
@@ -301,7 +301,7 @@ export default function MembershipLevelsCard({ currentLevel }: MembershipLevelsC
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
                 <div className="bg-background-light/30 p-2 rounded">
-                  <p className="text-xs text-foreground-muted">المكافأة</p>
+                  <p className="text-xs text-foreground-muted">المكافأة (إجمالي للمهام الثلاث)</p>
                   <p className="font-bold text-success">{level.rate}</p>
                 </div>
                 <div className="bg-background-light/30 p-2 rounded">

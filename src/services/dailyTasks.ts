@@ -38,14 +38,14 @@ export const MEMBERSHIP_LEVEL_NAMES = {
   '5': 'Iseix Elite'
 };
 
-// معدلات الربح لكل درجة عضوية (نسبة مئوية)
+// معدلات الربح لكل درجة عضوية (نسبة مئوية) - إجمالي للمهام الثلاث
 export const PROFIT_RATES = {
-  [MembershipLevel.BASIC]: { min: 2.76, max: 2.84 },     // 2.76% ~ 2.84% لكل مهمة للعضوية الأساسية
-  [MembershipLevel.SILVER]: { min: 2.76, max: 2.84 },    // 2.76% ~ 2.84% لكل مهمة للعضوية الفضية
-  [MembershipLevel.GOLD]: { min: 3.12, max: 3.20 },      // 3.12% ~ 3.20% لكل مهمة للعضوية الذهبية
-  [MembershipLevel.PLATINUM]: { min: 3.48, max: 3.60 },  // 3.48% ~ 3.60% لكل مهمة للعضوية البلاتينية
-  [MembershipLevel.DIAMOND]: { min: 3.90, max: 4.02 },   // 3.90% ~ 4.02% لكل مهمة للعضوية الماسية
-  [MembershipLevel.ELITE]: { min: 4.95, max: 5.04 },     // 4.95% ~ 5.04% لكل مهمة للعضوية النخبة
+  [MembershipLevel.BASIC]: { min: 2.76, max: 2.84 },     // 2.76% ~ 2.84% إجمالي للمهام الثلاث للعضوية الأساسية
+  [MembershipLevel.SILVER]: { min: 2.76, max: 2.84 },    // 2.76% ~ 2.84% إجمالي للمهام الثلاث للعضوية الفضية
+  [MembershipLevel.GOLD]: { min: 3.12, max: 3.20 },      // 3.12% ~ 3.20% إجمالي للمهام الثلاث للعضوية الذهبية
+  [MembershipLevel.PLATINUM]: { min: 3.48, max: 3.60 },  // 3.48% ~ 3.60% إجمالي للمهام الثلاث للعضوية البلاتينية
+  [MembershipLevel.DIAMOND]: { min: 3.90, max: 4.02 },   // 3.90% ~ 4.02% إجمالي للمهام الثلاث للعضوية الماسية
+  [MembershipLevel.ELITE]: { min: 4.95, max: 5.04 },     // 4.95% ~ 5.04% إجمالي للمهام الثلاث للعضوية النخبة
   // دعم القيم الرقمية
   '0': { min: 2.76, max: 2.84 },
   '1': { min: 2.76, max: 2.84 },
@@ -284,8 +284,14 @@ export const completeTask = async (userId: string): Promise<{ success: boolean; 
 
     // حساب المكافأة (نسبة مئوية من الرصيد)
     const profitRateRange = PROFIT_RATES[membershipLevel] || { min: 2.76, max: 2.84 };
-    // اختيار معدل ربح عشوائي بين الحد الأدنى والحد الأقصى
-    const profitRate = profitRateRange.min + (Math.random() * (profitRateRange.max - profitRateRange.min));
+    // تقسيم نسبة الربح على عدد المهام (3 مهام)
+    const taskCount = DAILY_TASKS_COUNT[membershipLevel] || 3;
+    const taskProfitRate = {
+      min: profitRateRange.min / taskCount,
+      max: profitRateRange.max / taskCount
+    };
+    // اختيار معدل ربح عشوائي بين الحد الأدنى والحد الأقصى للمهمة الواحدة
+    const profitRate = taskProfitRate.min + (Math.random() * (taskProfitRate.max - taskProfitRate.min));
     const reward = balance * (profitRate / 100);
 
     // تحديث سجل المهام اليومية

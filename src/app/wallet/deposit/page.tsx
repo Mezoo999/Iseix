@@ -25,14 +25,14 @@ function DepositContent() {
   const router = useRouter();
   const { currentUser, userData, loading } = useAuth();
   const { showAlert } = useAlert();
-  
+
   // التحقق من تسجيل الدخول
   useEffect(() => {
     if (!loading && !currentUser) {
       router.push('/login');
     }
   }, [currentUser, loading, router]);
-  
+
   // التعامل مع تقديم نموذج الإيداع
   const handleDepositSubmit = async (amount: number, method: string, txid: string) => {
     if (!currentUser) {
@@ -40,7 +40,7 @@ function DepositContent() {
       router.push('/login');
       return;
     }
-    
+
     try {
       // إنشاء طلب إيداع
       await createDepositRequest(
@@ -49,9 +49,29 @@ function DepositContent() {
         txid,
         method === 'usdt_trc20' ? 'binance' : method
       );
-      
+
+      // تحديث بيانات المستخدم في localStorage لتحسين تجربة المستخدم
+      try {
+        const userDataStr = localStorage.getItem('userData');
+        if (userDataStr) {
+          const userData = JSON.parse(userDataStr);
+          // لا نقوم بتحديث الرصيد هنا لأن الإيداع يحتاج إلى موافقة المسؤول أولاً
+          // لكن نقوم بتحديث حالة الإيداع
+          userData.pendingDeposits = userData.pendingDeposits || [];
+          userData.pendingDeposits.push({
+            amount,
+            method: method === 'usdt_trc20' ? 'USDT (TRC20)' : method,
+            txid,
+            timestamp: new Date().toISOString()
+          });
+          localStorage.setItem('userData', JSON.stringify(userData));
+        }
+      } catch (localStorageError) {
+        console.error('Error updating user data in localStorage:', localStorageError);
+      }
+
       showAlert('success', 'تم إرسال طلب الإيداع بنجاح. سيتم مراجعته وتحديث رصيدك في أقرب وقت.');
-      
+
       // العودة إلى صفحة المحفظة بعد 3 ثوانٍ
       setTimeout(() => {
         router.push('/wallet');
@@ -61,17 +81,17 @@ function DepositContent() {
       showAlert('error', 'حدث خطأ أثناء إرسال طلب الإيداع');
     }
   };
-  
+
   // إذا كان التحميل جاريًا، اعرض شاشة التحميل
   if (loading) {
     return <PageLoader />;
   }
-  
+
   // إذا لم يكن هناك مستخدم، لا تعرض شيئًا (سيتم توجيهه إلى صفحة تسجيل الدخول)
   if (!currentUser || !userData) {
     return null;
   }
-  
+
   return (
     <>
       <Navbar />
@@ -101,12 +121,12 @@ function DepositContent() {
               أضف أموالًا إلى محفظتك للبدء في الاستثمار
             </motion.p>
           </div>
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
               <DepositForm onSubmit={handleDepositSubmit} />
             </div>
-            
+
             <div>
               <motion.div
                 className="bg-background-light rounded-xl p-6 shadow-sm sticky top-24"
@@ -115,18 +135,18 @@ function DepositContent() {
                 transition={{ duration: 0.5, delay: 0.2 }}
               >
                 <h3 className="text-lg font-bold mb-4">معلومات الإيداع</h3>
-                
+
                 <div className="space-y-4">
                   <div>
                     <h4 className="font-bold mb-1">الحد الأدنى للإيداع</h4>
                     <p className="text-foreground-muted">50 USDT</p>
                   </div>
-                  
+
                   <div>
                     <h4 className="font-bold mb-1">وقت المعالجة</h4>
                     <p className="text-foreground-muted">1-24 ساعة</p>
                   </div>
-                  
+
                   <div>
                     <h4 className="font-bold mb-1">الشبكات المدعومة</h4>
                     <ul className="text-foreground-muted">
@@ -135,7 +155,7 @@ function DepositContent() {
                       <li>BTC (Bitcoin)</li>
                     </ul>
                   </div>
-                  
+
                   <div>
                     <h4 className="font-bold mb-1">ملاحظات هامة</h4>
                     <ul className="text-foreground-muted list-disc list-inside text-sm">

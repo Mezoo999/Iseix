@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FaUsers, FaMoneyBillWave, FaGlobe, FaServer } from 'react-icons/fa';
 import { FadeInView } from '@/components/ui/AnimatedElements';
+import { getPlatformStats, listenToPlatformStats, PlatformStats } from '@/services/platformStats';
 
 interface StatItemProps {
   icon: React.ReactNode;
@@ -18,6 +19,7 @@ function StatItem({ icon, value, label, delay, endValue, suffix = '' }: StatItem
   const [count, setCount] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const [animationStarted, setAnimationStarted] = useState(false);
+  const [previousEndValue, setPreviousEndValue] = useState(endValue);
 
   // استخدام useEffect منفصل لإعداد المراقب
   useEffect(() => {
@@ -41,6 +43,14 @@ function StatItem({ icon, value, label, delay, endValue, suffix = '' }: StatItem
       observer.disconnect();
     };
   }, [label, isVisible]);
+
+  // إعادة تشغيل الرسوم المتحركة عند تغيير القيمة
+  useEffect(() => {
+    if (endValue !== previousEndValue) {
+      setAnimationStarted(false);
+      setPreviousEndValue(endValue);
+    }
+  }, [endValue, previousEndValue]);
 
   // استخدام useEffect منفصل لتشغيل الرسوم المتحركة
   useEffect(() => {
@@ -98,35 +108,68 @@ function StatItem({ icon, value, label, delay, endValue, suffix = '' }: StatItem
 }
 
 export default function StatsSection() {
+  const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // جلب إحصائيات المنصة والاستماع للتغييرات
+  useEffect(() => {
+    // جلب الإحصائيات الأولية
+    const fetchInitialStats = async () => {
+      try {
+        const stats = await getPlatformStats();
+        setPlatformStats(stats);
+      } catch (error) {
+        console.error('خطأ في جلب إحصائيات المنصة الأولية:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInitialStats();
+
+    // الاستماع للتغييرات في الإحصائيات
+    const unsubscribe = listenToPlatformStats((stats) => {
+      console.log('تم تحديث إحصائيات المنصة:', stats);
+      setPlatformStats(stats);
+      setIsLoading(false);
+    });
+
+    // إلغاء الاستماع عند إزالة المكون
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // تحديد الإحصائيات بناءً على البيانات المستردة
   const stats = [
     {
       icon: <FaUsers className="text-xl sm:text-2xl" />,
-      value: '15K+',
-      endValue: 15000,
+      value: `${platformStats?.activeUsers.toLocaleString()}+`,
+      endValue: platformStats?.activeUsers || 5000,
       suffix: '+',
       label: 'مستخدم نشط',
       delay: 0.1
     },
     {
       icon: <FaMoneyBillWave className="text-xl sm:text-2xl" />,
-      value: '$10M+',
-      endValue: 10,
+      value: `$${platformStats?.managedInvestments || 2}M+`,
+      endValue: platformStats?.managedInvestments || 2,
       suffix: 'M+',
       label: 'استثمارات مُدارة',
       delay: 0.2
     },
     {
       icon: <FaGlobe className="text-xl sm:text-2xl" />,
-      value: '25+',
-      endValue: 25,
+      value: `${platformStats?.countries || 15}+`,
+      endValue: platformStats?.countries || 15,
       suffix: '+',
       label: 'دولة',
       delay: 0.3
     },
     {
       icon: <FaServer className="text-xl sm:text-2xl" />,
-      value: '99.9%',
-      endValue: 99.9,
+      value: `${platformStats?.uptime || 99.9}%`,
+      endValue: platformStats?.uptime || 99.9,
       suffix: '%',
       label: 'وقت تشغيل',
       delay: 0.4

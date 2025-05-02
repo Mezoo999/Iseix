@@ -22,10 +22,20 @@ export default function ReferralStatsCard({ className = '' }: ReferralStatsCardP
   const [referralCode, setReferralCode] = useState('');
   const [referralStats, setReferralStats] = useState<any>(null);
   const [referralLink, setReferralLink] = useState('');
-  const [referralRates, setReferralRates] = useState<{level1Rate: string, level2Rate: string, level3Rate: string}>({
+  const [referralRates, setReferralRates] = useState<{
+    level1Rate: string,
+    level2Rate: string,
+    level3Rate: string,
+    level4Rate: string,
+    level5Rate: string,
+    level6Rate: string
+  }>({
     level1Rate: '0%',
     level2Rate: '0%',
-    level3Rate: '0%'
+    level3Rate: '0%',
+    level4Rate: '0%',
+    level5Rate: '0%',
+    level6Rate: '0%'
   });
 
   // تحميل بيانات الإحالة
@@ -66,7 +76,28 @@ export default function ReferralStatsCard({ className = '' }: ReferralStatsCardP
 
       // الحصول على معدلات العمولة بناءً على مستوى العضوية
       try {
-        const membershipLevel = userData?.membershipLevel as MembershipLevel || MembershipLevel.BASIC;
+        // التحقق من وجود مستوى العضوية وتحويله إلى القيمة الصحيحة
+        let membershipLevel = MembershipLevel.BASIC;
+
+        if (userData?.membershipLevel) {
+          if (typeof userData.membershipLevel === 'string' &&
+              Object.values(MembershipLevel).includes(userData.membershipLevel as MembershipLevel)) {
+            membershipLevel = userData.membershipLevel as MembershipLevel;
+          } else if (typeof userData.membershipLevel === 'number') {
+            // تحويل الرقم إلى قيمة MembershipLevel
+            const levelMap: Record<number, MembershipLevel> = {
+              0: MembershipLevel.BASIC,
+              1: MembershipLevel.SILVER,
+              2: MembershipLevel.GOLD,
+              3: MembershipLevel.PLATINUM,
+              4: MembershipLevel.DIAMOND,
+              5: MembershipLevel.ELITE
+            };
+            membershipLevel = levelMap[userData.membershipLevel] || MembershipLevel.BASIC;
+          }
+        }
+
+        console.log('Current membership level:', membershipLevel);
         const rates = getReferralRatesForLevel(membershipLevel);
         setReferralRates(rates);
       } catch (ratesError) {
@@ -75,7 +106,10 @@ export default function ReferralStatsCard({ className = '' }: ReferralStatsCardP
         setReferralRates({
           level1Rate: '3.0%',
           level2Rate: '0.0%',
-          level3Rate: '0.0%'
+          level3Rate: '0.0%',
+          level4Rate: '0.0%',
+          level5Rate: '0.0%',
+          level6Rate: '0.0%'
         });
       }
     } catch (error) {

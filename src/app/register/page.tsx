@@ -32,9 +32,12 @@ function RegisterPageContent() {
 
   // الحصول على رمز الإحالة من معلمات البحث
   useEffect(() => {
-    const ref = searchParams?.get('ref');
-    if (ref) {
-      setReferralCode(ref);
+    if (searchParams) {
+      const ref = searchParams.get('ref');
+      console.log('Referral code from URL:', ref);
+      if (ref) {
+        setReferralCode(ref);
+      }
     }
   }, [searchParams]);
 
@@ -109,17 +112,22 @@ function RegisterPageContent() {
 
     try {
       console.log('Registering user with email:', formData.email);
+      console.log('Using referral code:', referralCode || 'No referral code');
 
       // تسجيل المستخدم باستخدام Firebase
-      await registerUser(formData.email, formData.password, formData.fullName, referralCode);
+      const userCredential = await registerUser(formData.email, formData.password, formData.fullName, referralCode);
 
+      console.log('Registration successful, user ID:', userCredential.user.uid);
       console.log('Registration successful, redirecting to dashboard');
+
+      // عرض رسالة نجاح للمستخدم
+      setError('');
 
       // توجيه المستخدم إلى لوحة التحكم
       // استخدام setTimeout لتأخير التوجيه قليلاً للسماح بتحديث حالة المصادقة
       setTimeout(() => {
         router.push('/dashboard');
-      }, 500);
+      }, 1000);
     } catch (err) {
       console.error('Registration error:', err);
       console.error('Error code:', err.code);
@@ -320,7 +328,7 @@ function RegisterPageContent() {
                 </div>
 
                 {/* رمز الإحالة المكتشف تلقائيًا */}
-                {referralCode && searchParams?.get('ref') && (
+                {referralCode && (
                   <div className="mb-6">
                     <div className="bg-success/10 p-4 rounded-lg flex items-start">
                       <FaLink className="text-success mt-1 ml-2 flex-shrink-0" />

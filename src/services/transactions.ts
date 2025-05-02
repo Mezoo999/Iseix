@@ -253,3 +253,6 @@ export const formatTransactionDate = (timestamp: any): string => {
     return '';
   }
 };
+
+// تصدير دالة تحديث رصيد المستخدم من ملف userBalance.ts
+export { updateUserBalance } from './userBalance';

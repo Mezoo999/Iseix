@@ -13,6 +13,8 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/firebase/config';
+import { updateUserBalance } from './users';
+import { createTransaction } from './transactions';
 
 // واجهة طلب الإيداع
 export interface DepositRequest {
@@ -172,16 +174,18 @@ export const approveDepositRequest = async (
       updatedAt: serverTimestamp()
     });
 
-    // تحديث رصيد المستخدم
-    const userRef = doc(db, 'users', requestData.userId);
-    await updateDoc(userRef, {
-      [`balances.USDT`]: increment(requestData.amount),
-      totalDeposited: increment(requestData.amount),
-      updatedAt: serverTimestamp()
-    });
+    // تحديث رصيد المستخدم باستخدام دالة updateUserBalance
+    console.log(`[deposits.ts] تحديث رصيد المستخدم ${requestData.userId} بمبلغ ${requestData.amount} USDT`);
+    await updateUserBalance(
+      requestData.userId,
+      requestData.amount,
+      'USDT',
+      'deposit'
+    );
 
-    // إنشاء معاملة إيداع
-    await addDoc(collection(db, 'transactions'), {
+    // إنشاء معاملة إيداع باستخدام دالة createTransaction
+    console.log(`[deposits.ts] إنشاء معاملة إيداع للمستخدم ${requestData.userId}`);
+    await createTransaction({
       userId: requestData.userId,
       type: 'deposit',
       amount: requestData.amount,
@@ -191,9 +195,9 @@ export const approveDepositRequest = async (
       metadata: {
         depositRequestId: requestId,
         txId: requestData.txId,
-        platform: requestData.platform
-      },
-      createdAt: serverTimestamp()
+        platform: requestData.platform,
+        approvedBy: adminId
+      }
     });
   } catch (error) {
     console.error('Error approving deposit request:', error);

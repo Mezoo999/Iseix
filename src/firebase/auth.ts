@@ -22,7 +22,9 @@ export const registerUser = async (
     // التحقق من رمز الإحالة إذا كان موجودًا
     let referrerId = null;
     if (referralCode) {
+      console.log(`[auth.ts] التحقق من رمز الإحالة: ${referralCode}`);
       referrerId = await getUserIdFromReferralCode(referralCode);
+      console.log(`[auth.ts] نتيجة التحقق من رمز الإحالة: ${referrerId ? 'تم العثور على المستخدم المحيل' : 'لم يتم العثور على المستخدم المحيل'}`);
     }
 
     // إنشاء المستخدم في Firebase Auth
@@ -43,7 +45,8 @@ export const registerUser = async (
       uid: user.uid,
       email,
       displayName,
-      isAdmin: false,
+      isAdmin: false, // المستخدم الجديد ليس مشرفًا
+      isOwner: false, // المستخدم الجديد ليس مالكًا
       balances: {
         USDT: 0,
       },
@@ -61,15 +64,26 @@ export const registerUser = async (
 
     // إنشاء إحالة إذا كان هناك رمز إحالة صالح
     if (referrerId) {
-      await createReferral(referrerId, user.uid, email);
-
-      // تحديث مستوى العضوية للمستخدم المحيل تلقائيًا
       try {
-        await autoUpdateMembershipLevel(referrerId);
-      } catch (membershipError) {
-        console.error('Error updating referrer membership level:', membershipError);
-        // لا نريد إيقاف عملية التسجيل إذا فشل تحديث مستوى العضوية
+        console.log(`[auth.ts] إنشاء إحالة للمستخدم الجديد: ${user.uid} بواسطة المحيل: ${referrerId}`);
+        await createReferral(referrerId, user.uid, email);
+        console.log(`[auth.ts] تم إنشاء الإحالة بنجاح`);
+
+        // تحديث مستوى العضوية للمستخدم المحيل تلقائيًا
+        try {
+          console.log(`[auth.ts] تحديث مستوى العضوية للمستخدم المحيل: ${referrerId}`);
+          await autoUpdateMembershipLevel(referrerId);
+          console.log(`[auth.ts] تم تحديث مستوى العضوية للمستخدم المحيل بنجاح`);
+        } catch (membershipError) {
+          console.error('[auth.ts] Error updating referrer membership level:', membershipError);
+          // لا نريد إيقاف عملية التسجيل إذا فشل تحديث مستوى العضوية
+        }
+      } catch (referralError) {
+        console.error('[auth.ts] Error creating referral:', referralError);
+        // لا نريد إيقاف عملية التسجيل إذا فشل إنشاء الإحالة
       }
+    } else if (referralCode) {
+      console.log(`[auth.ts] لم يتم العثور على مستخدم محيل برمز الإحالة: ${referralCode}`);
     }
 
     return userCredential;

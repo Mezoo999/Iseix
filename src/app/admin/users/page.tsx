@@ -10,6 +10,7 @@ import { collection, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, 
 import { db } from '@/firebase/config';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/firebase/config';
+import { addUserBalance } from '@/services/users';
 
 interface User {
   id: string;
@@ -462,43 +463,28 @@ export default function AdminUsers() {
     setIsProcessing(true);
     try {
       const amount = parseFloat(balanceAmount);
+
+      console.log(`إضافة رصيد للمستخدم ${selectedUser.id}. المبلغ المضاف: ${amount}`);
+
+      // استخدام دالة addUserBalance لإضافة الرصيد وإنشاء معاملة
+      await addUserBalance(
+        selectedUser.id,
+        amount,
+        'USDT',
+        `إيداع من المشرف: ${amount} USDT (${currentUser?.displayName || 'مدير النظام'})`
+      );
+
+      console.log(`تم إضافة الرصيد للمستخدم ${selectedUser.id} بنجاح`);
+
+      // الحصول على بيانات المستخدم المحدثة
       const userRef = doc(db, 'users', selectedUser.id);
-
-      // الحصول على بيانات المستخدم الحالية
       const userDoc = await getDoc(userRef);
-      if (!userDoc.exists()) {
-        throw new Error('لم يتم العثور على بيانات المستخدم');
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const newBalance = userData.balances?.USDT || 0;
+        console.log(`الرصيد الجديد للمستخدم: ${newBalance} USDT`);
       }
-
-      const userData = userDoc.data();
-      const currentBalance = userData.balances?.USDT || 0;
-
-      console.log(`إضافة رصيد للمستخدم ${selectedUser.id}. الرصيد الحالي: ${currentBalance}, المبلغ المضاف: ${amount}`);
-
-      // تحديث رصيد المستخدم
-      await updateDoc(userRef, {
-        'balances.USDT': currentBalance + amount,
-        totalDeposited: (userData.totalDeposited || 0) + amount,
-        updatedAt: serverTimestamp()
-      });
-
-      console.log(`تم تحديث رصيد المستخدم. الرصيد الجديد: ${currentBalance + amount}`);
-
-      // إنشاء معاملة إيداع
-      await addDoc(collection(db, 'transactions'), {
-        userId: selectedUser.id,
-        type: 'deposit',
-        amount: amount,
-        currency: 'USDT',
-        status: 'completed',
-        description: `إيداع من المشرف: ${amount} USDT`,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        metadata: {
-          adminDeposit: true,
-          adminId: currentUser?.uid
-        }
-      });
 
       console.log('تم إنشاء معاملة إيداع بنجاح');
 

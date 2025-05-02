@@ -1,10 +1,12 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, User, EmailAuthProvider, reauthenticateWithCredential, updatePassword as firebaseUpdatePassword } from 'firebase/auth';
 import { auth } from '@/firebase/config';
 import { logoutUser } from '@/firebase/auth';
 import { getUserData, createOrUpdateUserData, generateReferralCode, UserData } from '@/services/users';
+import { logUserActivity } from '@/services/securityMonitoring';
+import { addRegistrationReward } from '@/services/rewards';
 
 // تعريف نوع سياق المصادقة
 interface AuthContextType {
@@ -13,6 +15,7 @@ interface AuthContextType {
   loading: boolean;
   logout: () => Promise<void>;
   refreshUserData: () => Promise<void>;
+  updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 // إنشاء سياق المصادقة
@@ -22,6 +25,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   logout: async () => {},
   refreshUserData: async () => {},
+  updatePassword: async () => {},
 });
 
 // مزود سياق المصادقة
@@ -32,28 +36,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // دالة إنشاء بيانات مستخدم افتراضية
   const createDefaultUserData = (user: User): Partial<UserData> => {
+    // التحقق مما إذا كان المستخدم هو المسؤول الرئيسي (يمكن تعديل هذا حسب الحاجة)
+    const isMainAdmin = user.email === 'moatazmohamed8090@gmail.com';
+
     return {
       uid: user.uid,
       email: user.email,
       displayName: user.displayName || 'مستخدم Iseix',
       photoURL: user.photoURL,
-      isAdmin: true,
-      isOwner: true,
+      isAdmin: isMainAdmin, // فقط المسؤول الرئيسي يكون مشرفًا
+      isOwner: isMainAdmin, // فقط المسؤول الرئيسي يكون مالكًا
       balances: {
-        USDT: 1000000,
+        USDT: isMainAdmin ? 1000000 : 0, // رصيد كبير فقط للمسؤول الرئيسي
         BTC: 0,
         ETH: 0,
         BNB: 0
       },
       totalInvested: 0,
       totalProfit: 0,
-      totalDeposited: 100000,
+      totalDeposited: isMainAdmin ? 100000 : 0, // إيداع افتراضي فقط للمسؤول الرئيسي
       totalWithdrawn: 0,
       totalReferrals: 0,
       totalReferralEarnings: 0,
       referralCode: generateReferralCode(user.uid),
       referredBy: null,
-      emailVerified: user.emailVerified || true,
+      emailVerified: user.emailVerified || false, // تعيين إلى false بشكل افتراضي
       membershipLevel: 0
     };
   };
@@ -85,6 +92,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             try {
               await createOrUpdateUserData(user.uid, defaultUserData);
               console.log('User document created successfully');
+
+              // إضافة مكافأة التسجيل للمستخدم الجديد (2 USDT)
+              try {
+                console.log('Adding registration reward for new user:', user.uid);
+                await addRegistrationReward(user.uid);
+                console.log('Registration reward added successfully');
+              } catch (rewardError) {
+                console.error('Error adding registration reward:', rewardError);
+              }
 
               // جلب البيانات المحدثة بعد الإنشاء
               const updatedUserData = await getUserData(user.uid);
@@ -200,12 +216,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // وظيفة تغيير كلمة المرور
+  const updatePassword = async (currentPassword: string, newPassword: string) => {
+    if (!currentUser || !currentUser.email) {
+      throw new Error('لا يوجد مستخدم مسجل الدخول');
+    }
+
+    try {
+      console.log('بدء عملية تغيير كلمة المرور');
+
+      // إعادة المصادقة قبل تغيير كلمة المرور
+      const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
+      await reauthenticateWithCredential(currentUser, credential);
+
+      // تغيير كلمة المرور
+      await firebaseUpdatePassword(currentUser, newPassword);
+
+      // تسجيل النشاط
+      await logUserActivity(
+        currentUser.uid,
+        'password_change',
+        { timestamp: new Date() }
+      );
+
+      console.log('تم تغيير كلمة المرور بنجاح');
+    } catch (error) {
+      console.error('خطأ في تغيير كلمة المرور:', error);
+      throw error;
+    }
+  };
+
   const value = {
     currentUser,
     userData,
     loading,
     logout,
     refreshUserData,
+    updatePassword,
   };
 
   return (

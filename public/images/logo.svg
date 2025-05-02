@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- خلفية دائرية متدرجة -->
+  <circle cx="100" cy="100" r="95" fill="url(#gradient)" />
+  
+  <!-- حدود الشعار -->
+  <circle cx="100" cy="100" r="95" stroke="#3B82F6" stroke-width="2" />
+  
+  <!-- حرف I -->
+  <path d="M60 70H80V130H60V70Z" fill="white" />
+  
+  <!-- حرف S -->
+  <path d="M90 70C90 70 110 70 110 85C110 100 90 100 90 100C90 100 110 100 110 115C110 130 90 130 90 130H120V115C120 115 130 115 130 100C130 85 120 85 120 85V70H90Z" fill="white" />
+  
+  <!-- حرف E -->
+  <path d="M140 70H170V85H140V100H160V115H140V130H170V70H140Z" fill="white" />
+  
+  <!-- نقاط توهج -->
+  <circle cx="70" cy="60" r="5" fill="#3B82F6" />
+  <circle cx="130" cy="60" r="5" fill="#3B82F6" />
+  <circle cx="100" cy="140" r="5" fill="#3B82F6" />
+  
+  <!-- تعريف التدرج -->
+  <defs>
+    <linearGradient id="gradient" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1E3A8A" />
+      <stop offset="1" stop-color="#3B82F6" />
+    </linearGradient>
+  </defs>
+</svg>
